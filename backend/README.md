@@ -684,7 +684,7 @@ This will scaffold a gateway class in `src/modules/events/` that you can extend 
 
 Contributions are welcome! Please follow these steps:
 
-1. Fork the repository
+1. Clone the repo `git clone <url>.git`
 2. Create a feature branch: `git checkout -b feat/my-feature`
 3. Make your changes and add tests where appropriate
 4. Ensure all tests pass: `npm test`
@@ -693,14 +693,8 @@ Contributions are welcome! Please follow these steps:
 
 ---
 
-## 📄 License
-
-This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.
-
----
-
 <div align="center">
 
-Made with ❤️ by [Cameron Ginther](https://github.com/DiamondJdev), Chloe Hunter, and Brett Berry
+Made with ❤️ by [Cameron Ginther](https://github.com/DiamondJdev)
 
 </div>
