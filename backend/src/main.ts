@@ -21,12 +21,19 @@ async function bootstrap() {
 	logger.log("\n\nApplication starting...", "Bootstrap");
 
   /**
-   * Enable CORS for all origins bc screw security
-   *
-   * TODO: In production, CORS would be restricted to frontend and other trusted origins
+   * Enable cookie parsing middleware to read HttpOnly cookies for authentication. This allows the JwtAuthGuard to extract tokens from cookies as well as Authorization headers.
+   * Note: The JwtAuthGuard will look for the access token in the HttpOnly cookie
+   * CORS must also be configured to allow credentials (cookies) to be sent from the frontend.
+   * See 
+   * @see JwtAuthGuard implementation for details on how tokens are extracted and verified.
    */
   app.use(cookieParser());
+  /**
+   * Enable CORS for all origins bc screw security
+   * TODO: In production, CORS would be restricted to frontend and other trusted origins
+   */
   app.enableCors({ origin: true, credentials: true });
+  
 
   app.useGlobalPipes(
     new ValidationPipe({
