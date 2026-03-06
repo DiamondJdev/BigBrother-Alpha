@@ -150,5 +150,20 @@ export class DbService {
 
 		if (result.affected === 0) throw new BadRequestException('Could not find user to save refresh token');
 	}
+
+	/**
+	 * Clears a user's refresh token and expiration fields (logout/revoke).
+	 *
+	 * @param userId User id
+	 * @throws BadRequestException if user not found
+	 */
+	async clearRefreshToken(userId: string): Promise<void> {
+		const result = await this.userRepository.update(
+			{ id: userId },
+			{ refreshTokenHash: '', refreshTokenExpiresAt: '' },
+		);
+
+		if (result.affected === 0) throw new BadRequestException('Could not find user to clear refresh token');
+	}
 }
 

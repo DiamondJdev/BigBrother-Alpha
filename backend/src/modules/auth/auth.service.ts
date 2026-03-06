@@ -206,4 +206,9 @@ export class AuthService {
   ): Promise<{ loggedIn: boolean; userId?: string }> {
     return { loggedIn: await this.jwtService.verifyToken(accessToken) };
   }
+
+  async invalidateUserTokens(userId: string): Promise<void> {
+    await this.dbService.clearRefreshToken(userId); // Db service to null user's tokens
+    this.logger.logUserStats("logout", userId); // Log logout event for analytics
+  }
 }

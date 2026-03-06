@@ -107,7 +107,7 @@ export class AuthController {
     @Request() req: AuthenticatedRequest,
     @Response({ passthrough: true }) res: ExpressResponse,
   ) {
-    const refreshToken = req.cookies?.refresh_token ?? refreshTokenDto.refreshToken;
+    const refreshToken = req.cookies?.refresh_token;
     if (!refreshToken) throw new UnauthorizedException("Refresh token is missing");
     const result = await this.authService.refresh(req, refreshToken);
     setAuthCookies(res, result.accessToken, result.refreshToken);
@@ -118,6 +118,11 @@ export class AuthController {
   }
 
   /**
+   * Route to end user session by clearing auth cookies AND
+   * Removing stored tokens from the databse to invalidate the session server-side.
+   * 
+   * !: Requires a valid JWT token in the Authorization header to identify the user session to log out.
+   * 
    * @param res - The response object used to clear auth cookies on logout
    * @returns void
    * @throws UnauthorizedException if user is not authenticated (should be handled by JwtAuthGuard)
@@ -126,7 +131,9 @@ export class AuthController {
   @Delete("logout")
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(JwtAuthGuard)
-  logout(@Response({ passthrough: true }) res: ExpressResponse): void {
+  async logout(@Request() req: AuthenticatedRequest, @Response({ passthrough: true }) res: ExpressResponse): Promise<void> {
+    // Clear stored tokens from database to completely invalidate the session
+    await this.authService.invalidateUserTokens(req.user.id);
     clearAuthCookies(res);
   }
 
@@ -135,7 +142,7 @@ export class AuthController {
    * valid JWT bearer token
    * @returns status 200 on success with user data
    * @throws UnauthorizedException if no valid JWT token is provided
-   * @throws ForbiddenException if user does not have access (Should not happen)
+   * @throws ForbiddenException if user does not have access
    */
   @Get("me")
   @HttpCode(HttpStatus.OK)
