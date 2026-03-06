@@ -132,7 +132,7 @@ PostgreSQL row level policies enforce isolation.
 
 Example
 
-```
+```SQL
 CREATE POLICY tenant_isolation_policy
 ON software_evaluations
 USING (tenant_id = current_setting('app.tenant_id')::uuid);
@@ -160,7 +160,7 @@ Authentication method
 
 JWT Structure
 
-```
+```text
 {
   user_id
   tenant_id
@@ -211,7 +211,7 @@ Workflow
 
 Device Request Headers
 
-```
+```HTTP HEADER
 Authorization: Bearer DEVICE_TOKEN
 X-Device-ID: uuid
 ```
@@ -413,7 +413,7 @@ Approval Types
 
 Each approval record contains
 
-```
+```text
 approval_id
 software_id
 approver_user_id
@@ -445,7 +445,7 @@ Audit logs are stored in an **append only audit table**.
 
 Example structure
 
-```
+```text
 audit_logs
 ---------
 id
@@ -466,8 +466,9 @@ Logs cannot be modified.
 
 Tenants
 
-```
+```text
 tenants
+--------
 id
 name
 created_at
@@ -477,6 +478,7 @@ Groups
 
 ```
 groups
+-------
 id
 tenant_id
 name
@@ -484,8 +486,9 @@ name
 
 Users
 
-```
+```text
 users
+-------
 id
 tenant_id
 group_id
@@ -497,8 +500,9 @@ created_at
 
 Devices
 
-```
+```text
 devices
+--------
 id
 tenant_id
 hostname
