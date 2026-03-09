@@ -3,14 +3,12 @@ import {
   IsString,
   Length,
   IsStrongPassword,
-  IsAlphanumeric,
   MaxLength,
 } from "class-validator";
 
 export class createUserDto {
   @IsNotEmpty({ message: "Username is required" })
   @IsString()
-  @IsAlphanumeric(undefined, { message: "Username must contain only letters and numbers" })
   @Length(3, 64, { message: "Username must be between 3 and 64 characters" })
   username: string;
 
