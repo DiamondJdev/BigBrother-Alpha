@@ -7,6 +7,7 @@ import { RolesModule } from "./roles/roles.module";
 import { JwtModule } from "./jwt/jwt.module";
 import { DbModule } from "./db/db.module";
 import { CommonModule } from "./common/common.module";
+import { CacheModule } from "./cache/cache.module";
 
 /** DO NOT DELETE
  * app.module is the master module that imports all other modules
@@ -44,6 +45,7 @@ import { CommonModule } from "./common/common.module";
     JwtModule,
     DbModule,
     CommonModule,
+    CacheModule,
   ],
 })
 export class AppModule {}

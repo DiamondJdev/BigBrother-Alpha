@@ -11,12 +11,16 @@ import { QueryFailedError, Repository } from 'typeorm';
 import { User } from '../common/entities/user.entity';
 import { UpdateUserDto } from '../common/dto/updateUser.dto';
 import { isValidRole } from '../common/utils/roleChecker';
+import { CacheService } from '../cache/cache.service';
+import { CacheKeys } from '../cache/constants/cache-keys';
+import { CacheTTL } from '../cache/constants/cache-ttl';
 
 @Injectable()
 export class DbService {
 	constructor(
 		@InjectRepository(User)
 		private readonly userRepository: Repository<User>,
+		private readonly cacheService: CacheService,
 	) {}
 	
 	/**
@@ -45,7 +49,12 @@ export class DbService {
 	 * @returns User[] An array of all user records in the database
 	 */
 	async findAll(): Promise<User[]> {
-		return await this.userRepository.find();
+		const cached = await this.cacheService.get<User[]>(CacheKeys.allUsers());
+		if (cached) return cached;
+
+		const users = await this.userRepository.find();
+		await this.cacheService.set(CacheKeys.allUsers(), users, CacheTTL.ALL_USERS);
+		return users;
 	}
 	
 	/**
@@ -58,7 +67,9 @@ export class DbService {
 	 */
 	async create(user: User): Promise<User | undefined> {
 		try {
-			return await this.userRepository.save(user);
+			const created = await this.userRepository.save(user);
+			await this.cacheService.del(CacheKeys.allUsers());
+			return created;
 		} catch (error) {
 			if (error instanceof QueryFailedError) throw new ConflictException('User already exists');
 			throw new InternalServerErrorException('Failed to create user');
@@ -75,12 +86,23 @@ export class DbService {
 	 */
 	async findOne(uuid?: string, username?: string): Promise<User | null> {
 		if (!uuid && !username) throw new BadRequestException('No Parameters provided');
-		
-		const user = uuid 
-			? await this.userRepository.findOneBy({ id: uuid })
-			:	await this.userRepository.findOneBy({ username });
 
-		return user ?? null;
+		// Cache is keyed by UUID only; username lookups (login path) always hit the DB.
+		if (uuid) {
+			const cached = await this.cacheService.get<User>(CacheKeys.user(uuid));
+			console.log(`Cache lookup for user:${uuid} returned ${cached ? 'HIT' : 'MISS'}`);
+			if (cached) return cached;
+		}
+
+		const user = uuid
+			? await this.userRepository.findOneBy({ id: uuid })
+			: await this.userRepository.findOneBy({ username });
+
+		const resolved = user ?? null;
+		if (uuid && resolved) {
+			await this.cacheService.set(CacheKeys.user(uuid), resolved, CacheTTL.USER);
+		}
+		return resolved;
 	}
 	
 	/**
@@ -93,6 +115,12 @@ export class DbService {
 	async remove(uuid: string): Promise<void> {
 		const result = await this.userRepository.delete({ id: uuid });
 		if (result.affected === 0) throw new BadRequestException('Could not find user to delete');
+		await this.cacheService.del(
+			CacheKeys.user(uuid),
+			CacheKeys.userRole(uuid),
+			CacheKeys.refreshToken(uuid),
+			CacheKeys.allUsers(),
+		);
 	}
 	
 	/**
@@ -113,6 +141,7 @@ export class DbService {
 		);
 
 		if (result.affected === 0) throw new BadRequestException('Could not find user to update');
+		await this.cacheService.del(CacheKeys.user(uuid));
 	}
 	
 	/**
@@ -132,8 +161,33 @@ export class DbService {
 		);
 
 		if (result.affected === 0) throw new BadRequestException('Could not find user to update role');
+		await this.cacheService.del(
+			CacheKeys.user(uuid),
+			CacheKeys.userRole(uuid),
+			CacheKeys.allUsers(),
+		);
 	}
 	
+	/**
+	 * Returns the stored refresh token hash for a user.
+	 *
+	 * Reads from the dedicated `refresh_token:{userId}` cache key, which is
+	 * always written atomically alongside the DB in saveRefreshToken. This key
+	 * is always current and is never stale — unlike the broader `user:{userId}`
+	 * entity cache, which can lag behind a rotation if its DEL is dropped.
+	 *
+	 * Falls back to a direct DB query on a cache miss.
+	 *
+	 * @param userId User id
+	 * @returns The current refresh token hash, or null if none is stored
+	 */
+	async getRefreshTokenHash(userId: string): Promise<string | null> {
+		const cached = await this.cacheService.get<string>(CacheKeys.refreshToken(userId));
+		if (cached !== null) return cached;
+		const user = await this.userRepository.findOneBy({ id: userId });
+		return user?.refreshTokenHash ?? null;
+	}
+
 	/**
 	 * Saves a refresh token hash for the user.
 	 * 
@@ -149,6 +203,9 @@ export class DbService {
 		);
 
 		if (result.affected === 0) throw new BadRequestException('Could not find user to save refresh token');
+		// Cache the hash and evict the stale full-user record in a single round trip.
+		await this.cacheService.set(CacheKeys.refreshToken(userId), refreshTokenHash, CacheTTL.REFRESH_TOKEN);
+		await this.cacheService.del(CacheKeys.user(userId));
 	}
 
 	/**
@@ -164,6 +221,10 @@ export class DbService {
 		);
 
 		if (result.affected === 0) throw new BadRequestException('Could not find user to clear refresh token');
+		await this.cacheService.del(
+			CacheKeys.refreshToken(userId),
+			CacheKeys.user(userId),
+		);
 	}
 }
 

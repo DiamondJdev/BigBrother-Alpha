@@ -1,0 +1,354 @@
+{
+  "info": {
+    "name": "Redis Cache — BigBrother Backend",
+    "description": "End-to-end tests that prove the Upstash Redis read-through cache is working.\n\nScenarios covered:\n  1. Cache Miss then Hit  — Two identical GET /users/me calls; second must be faster.\n  2. Write Invalidation   — PATCH /users/:uuid evicts the user cache; next GET returns fresh data.\n  3. Logout Eviction      — POST /auth/logout evicts the refresh-token cache; old token is rejected.\n\nRun with: Collection Runner → in order, without delays.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl",           "value": "http://localhost:8080" },
+    { "key": "testUsername",      "value": "cache_test_user" },
+    { "key": "testPassword",      "value": "CacheTest1234!" },
+    { "key": "accessToken",       "value": "" },
+    { "key": "refreshToken",      "value": "" },
+    { "key": "userId",            "value": "" },
+    { "key": "firstResponseMs",   "value": "" },
+    { "key": "newPassword",       "value": "CacheTest1234_Updated!" }
+  ],
+  "item": [
+    {
+      "name": "0 — Register test user",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Registration succeeded', () => {",
+              "  pm.response.to.have.status(201);",
+              "  const body = pm.response.json();",
+              "  pm.expect(body).to.have.property('accessToken');",
+              "  pm.expect(body.user).to.have.property('id');",
+              "  pm.collectionVariables.set('accessToken', body.accessToken);",
+              "  pm.collectionVariables.set('refreshToken', body.refreshToken);",
+              "  pm.collectionVariables.set('userId', body.user.id);",
+              "  console.log('Registered userId:', body.user.id);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/auth/register",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{testUsername}}\",\n  \"password\": \"{{testPassword}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "1 — Login (warms refresh-token cache)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Login OK', () => pm.response.to.have.status(200));",
+              "",
+              "const body = pm.response.json();",
+              "pm.collectionVariables.set('accessToken', body.accessToken);",
+              "pm.collectionVariables.set('refreshToken', body.refreshToken);",
+              "pm.collectionVariables.set('userId', body.user.id);",
+              "",
+              "pm.test('Access token present', () => pm.expect(body.accessToken).to.be.a('string').and.not.empty);",
+              "pm.test('Refresh token present', () => pm.expect(body.refreshToken).to.be.a('string').and.not.empty);",
+              "pm.test('User id stored', () => pm.expect(pm.collectionVariables.get('userId')).to.not.be.empty);",
+              "",
+              "console.log('Login complete — userId:', body.user.id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{testUsername}}\",\n  \"password\": \"{{testPassword}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "2 — GET /users/me  [CACHE MISS — populates user cache]",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "",
+              "const body = pm.response.json();",
+              "pm.test('Response has user id', () => pm.expect(body.id).to.be.a('string').and.not.empty);",
+              "pm.test('Response has username', () => pm.expect(body.username).to.be.a('string').and.not.empty);",
+              "",
+              "// Store response time so next request can compare",
+              "pm.collectionVariables.set('firstResponseMs', pm.response.responseTime);",
+              "console.log('Cache MISS response time:', pm.response.responseTime, 'ms');"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+        "url": "{{baseUrl}}/users/me"
+      }
+    },
+    {
+      "name": "3 — GET /users/me  [CACHE HIT — should be faster]",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "",
+              "const body = pm.response.json();",
+              "pm.test('Same user id returned', () => {",
+              "  pm.expect(body.id).to.equal(pm.collectionVariables.get('userId'));",
+              "});",
+              "",
+              "// Timing comparison — Redis hit should be faster than the miss.",
+              "// Uses a relaxed threshold: cache hit must be ≤ miss time + 30 ms to allow",
+              "// network jitter on the Upstash HTTP round-trip.",
+              "const missMs  = parseInt(pm.collectionVariables.get('firstResponseMs'), 10);",
+              "const hitMs   = pm.response.responseTime;",
+              "console.log('Cache MISS was', missMs, 'ms | Cache HIT was', hitMs, 'ms');",
+              "",
+              "pm.test('Cache HIT is not slower than MISS + 30 ms jitter', () => {",
+              "  pm.expect(hitMs).to.be.at.most(missMs + 30,",
+              "    `Expected cache hit (${hitMs}ms) ≤ miss (${missMs}ms) + 30ms jitter`);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+        "url": "{{baseUrl}}/users/me"
+      }
+    },
+    {
+      "name": "4 — PATCH /users/:uuid  [WRITE — invalidates user cache]",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('200 OK on update', () => pm.response.to.have.status(200));",
+              "console.log('Password updated — user cache for', pm.collectionVariables.get('userId'), 'should now be evicted.');"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+          { "key": "Content-Type",   "value": "application/json" }
+        ],
+        "url": "{{baseUrl}}/users/{{userId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"password\": \"{{newPassword}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "5 — GET /users/me  [POST-INVALIDATION — fresh DB fetch, re-populates cache]",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('200 OK after invalidation', () => pm.response.to.have.status(200));",
+              "",
+              "const body = pm.response.json();",
+              "pm.test('User id still matches', () => {",
+              "  pm.expect(body.id).to.equal(pm.collectionVariables.get('userId'));",
+              "});",
+              "",
+              "// After the cache was evicted by the PATCH, this request should have gone to DB.",
+              "// We log the time so it is visible in the runner; no hard assert since DB can be fast.",
+              "console.log('Post-invalidation response time (DB fetch):', pm.response.responseTime, 'ms');"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+        "url": "{{baseUrl}}/users/me"
+      }
+    },
+    {
+      "name": "6 — POST /auth/refresh  [TOKEN ROTATION — evicts old refresh-token cache]",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Refresh succeeded', () => pm.response.to.have.status(200));",
+              "",
+              "const body = pm.response.json();",
+              "pm.test('New access token issued',  () => pm.expect(body.accessToken).to.be.a('string').and.not.empty);",
+              "pm.test('New refresh token issued', () => pm.expect(body.refreshToken).to.be.a('string').and.not.empty);",
+              "",
+              "// Store new tokens — old refresh token is now invalid in DB and evicted from cache",
+              "const oldRefresh = pm.collectionVariables.get('refreshToken');",
+              "pm.collectionVariables.set('accessToken',  body.accessToken);",
+              "pm.collectionVariables.set('refreshToken', body.refreshToken);",
+              "pm.collectionVariables.set('oldRefreshToken', oldRefresh);",
+              "",
+              "console.log('Token rotation complete — old refresh token evicted from cache.');"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+          { "key": "Content-Type",   "value": "application/json" }
+        ],
+        "url": "{{baseUrl}}/auth/refresh",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "7 — POST /auth/refresh with OLD token  [REPLAY — must be rejected]",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Old refresh token is rejected (401)', () => {",
+              "  pm.response.to.have.status(401);",
+              "});",
+              "console.log('Replay protection confirmed — old refresh token rejected.');"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+          { "key": "Content-Type",   "value": "application/json" }
+        ],
+        "url": "{{baseUrl}}/auth/refresh",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"refreshToken\": \"{{oldRefreshToken}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "8 — POST /auth/logout  [EVICTS refresh-token + user cache]",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Logout succeeded', () => pm.response.to.have.status(200));",
+              "console.log('Logout complete — refresh-token and user caches evicted.');"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+        "url": "{{baseUrl}}/auth/logout"
+      }
+    },
+    {
+      "name": "9 — GET /users/me after logout  [must be rejected]",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Accessing protected route after logout fails (401)', () => {",
+              "  pm.response.to.have.status(401);",
+              "});",
+              "console.log('Post-logout access correctly rejected.');"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+        "url": "{{baseUrl}}/users/me"
+      }
+    },
+    {
+      "name": "— ADMIN ONLY — GET /users  [CACHE MISS then HIT for findAll]",
+      "description": "Run this pair manually with an admin account token.\nSet the 'adminToken' collection variable before running.",
+      "item": [
+        {
+          "name": "A1 — GET /users  [MISS — populates users:all cache]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('allUsersMissMs', pm.response.responseTime);",
+                  "console.log('findAll MISS:', pm.response.responseTime, 'ms');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/users"
+          }
+        },
+        {
+          "name": "A2 — GET /users  [HIT — served from users:all cache]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "",
+                  "const missMs = parseInt(pm.collectionVariables.get('allUsersMissMs'), 10);",
+                  "const hitMs  = pm.response.responseTime;",
+                  "console.log('findAll MISS was', missMs, 'ms | findAll HIT was', hitMs, 'ms');",
+                  "",
+                  "pm.test('findAll cache HIT is not slower than MISS + 30 ms', () => {",
+                  "  pm.expect(hitMs).to.be.at.most(missMs + 30);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/users"
+          }
+        }
+      ]
+    }
+  ]
+}

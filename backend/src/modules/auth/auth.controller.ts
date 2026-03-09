@@ -89,8 +89,9 @@ export class AuthController {
 
   /**
    * Refreshes the authentication tokens for a logged-in user.
-   * The refresh token can be supplied as an HttpOnly cookie (preferred) or
-   * in the request body for backward-compatible clients.
+   * The refresh token can be supplied as an HttpOnly cookie
+   * 
+   * WARNING: Cannot be supplied in the body or query params, only cookies
    * 
    * @param refreshTokenDto - Optional DTO containing the refresh token
    * @param req - The authenticated request object containing user information
