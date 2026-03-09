@@ -12,7 +12,8 @@ This project-level CLAUDE.md is a short reference for future Claude Code session
 - Language: TypeScript
 - Framework: NestJS 11
 - Test runner: Jest
-- Local DB: SQLite (easy swap to Postgres)
+- Local DB: PostgreSQL
+- Cache: Upstash Redis
 - Main entry: [src/main.ts:7](src/main.ts#L7)
 - Scripts: see [package.json:8](package.json#L8)
 
@@ -129,6 +130,7 @@ Parallelize agents where tasks are independent (e.g., run security-reviewer and 
 - Auth business logic: [src/modules/auth/auth.service.ts](src/modules/auth/auth.service.ts)
 - User model: [src/modules/common/entities/user.entity.ts](src/modules/common/entities/user.entity.ts)
 - DB wiring: [src/modules/db/db.service.ts](src/modules/db/db.service.ts)
+- Cache wiring: [src/modules/cache/cache.service.ts](src/modules/cache/cache.service.ts)
 
 ---
 
