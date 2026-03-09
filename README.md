@@ -12,5 +12,5 @@ Developers Currently working on backend:
 Tasks
 1. Json (waiting on team 3)
 2. Approvels  (working on)
-3. Files - S3 (Completed)
+3. Files - S3 (Out of Scope)
 4. Redis - DB (Completed)
