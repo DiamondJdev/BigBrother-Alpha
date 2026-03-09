@@ -2,7 +2,7 @@
   "name": "bigbrother-platform-backend",
   "version": "0.0.1",
   "description": "",
-  "author": "Cameron Ginther, Alex Cathey, Amis Johnson, Felix Schwarze, and Aaden Master",
+  "author": "Cameron Ginther, Alex Cathey, Noah May, Felix Schwarze, and Aaden Master",
   "private": false,
   "scripts": {
     "build": "nest build",
