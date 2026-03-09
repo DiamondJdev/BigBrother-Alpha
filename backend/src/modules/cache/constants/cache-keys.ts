@@ -7,6 +7,9 @@ export const CacheKeys = {
   /** Full user record, looked up by UUID */
   user: (uuid: string): string => `user:${uuid}`,
 
+  /** Sanitized user cache (safe for external Redis), excludes sensitive fields */
+  userSafe: (uuid: string): string => `user_safe:${uuid}`,
+
   /** Isolated role string for a user */
   userRole: (uuid: string): string => `user_role:${uuid}`,
 
