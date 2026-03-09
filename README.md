@@ -10,7 +10,7 @@ Developers Currently working on backend:
 - Dev: Noah
 
 Tasks
-    1. Json (waiting on team 3)
-    2. Approvels  (working on)
-    3. Files - S3 (Completed)
-    4. Redis - DB (Completed)
+1. Json (waiting on team 3)
+2. Approvels  (working on)
+3. Files - S3 (Completed)
+4. Redis - DB (Completed)
