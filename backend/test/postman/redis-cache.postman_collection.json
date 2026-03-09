@@ -194,7 +194,7 @@
       }
     },
     {
-      "name": "6 — POST /auth/refresh  [TOKEN ROTATION — evicts old refresh-token cache]",
+      "name": "6 — PATCH /auth/refresh  [TOKEN ROTATION — evicts old refresh-token cache]",
       "event": [
         {
           "listen": "test",
@@ -218,7 +218,7 @@
         }
       ],
       "request": {
-        "method": "POST",
+        "method": "PATCH",
         "header": [
           { "key": "Authorization", "value": "Bearer {{accessToken}}" },
           { "key": "Content-Type",   "value": "application/json" }
@@ -231,7 +231,7 @@
       }
     },
     {
-      "name": "7 — POST /auth/refresh with OLD token  [REPLAY — must be rejected]",
+      "name": "7 — PATCH /auth/refresh with OLD token  [REPLAY — must be rejected]",
       "event": [
         {
           "listen": "test",
@@ -246,7 +246,7 @@
         }
       ],
       "request": {
-        "method": "POST",
+        "method": "PATCH",
         "header": [
           { "key": "Authorization", "value": "Bearer {{accessToken}}" },
           { "key": "Content-Type",   "value": "application/json" }
