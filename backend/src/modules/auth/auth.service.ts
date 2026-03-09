@@ -176,12 +176,14 @@ export class AuthService {
     req: AuthenticatedRequest,
     refreshToken: string,
   ): Promise<{ message: string; accessToken: string; refreshToken: string }> {
-    // Read the hash from the dedicated refresh_token:{userId} cache key rather
-    // than from the user entity cache. The user entity cache (user:{userId}) is
-    // a general-purpose cache whose DEL can fail silently, leaving a stale hash
-    // in place and allowing replayed tokens to pass validation. The
-    // refresh_token:{userId} key is always written atomically with the DB in
-    // saveRefreshToken, so it is always authoritative.
+    /** 
+     * Read the hash from the dedicated refresh_token:{userId} cache key rather
+     * than from the user entity cache. The user entity cache (user:{userId}) is
+     * a general-purpose cache whose DEL can fail silently, leaving a stale hash
+     * in place and allowing replayed tokens to pass validation. The
+     * refresh_token:{userId} key is always written atomically with the DB in
+     * saveRefreshToken, so it is always authoritative.
+     */
     const storedHash = await this.dbService.getRefreshTokenHash(req.user.id);
     if (!storedHash) throw new UnauthorizedException("Error validating refresh token");
 
@@ -198,7 +200,7 @@ export class AuthService {
       throw new UnauthorizedException("Invalid refresh token");
     }
 
-    // role is already on req.user from JwtAuthGuard — no need to re-fetch the user.
+    // role is already on req.user from JwtAuthGuard here, no need to re-fetch the user.
     const {
       accessToken,
       refreshToken: newRefreshToken,
@@ -220,7 +222,7 @@ export class AuthService {
   }
 
   async invalidateUserTokens(userId: string): Promise<void> {
-    await this.dbService.clearRefreshToken(userId); // Db service to null user's tokens
-    this.logger.logUserStats("logout", userId); // Log logout event for analytics
+    await this.dbService.clearRefreshToken(userId);
+    this.logger.logUserStats("logout", userId);
   }
 }
