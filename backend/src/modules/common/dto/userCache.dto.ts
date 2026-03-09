@@ -10,19 +10,13 @@
  * - Non-sensitive
  */
 export class UserCacheDto {
-  /**
-   * User's unique identifier
-   */
+  // User's unique identifier
   id: string;
 
-  /**
-   * Username for display and identification
-   */
+  // Username for display and identification
   username: string;
 
-  /**
-   * User's role for authorization checks
-   */
+  // User's role for authorization checks
   role: string;
 
   /**
@@ -31,9 +25,7 @@ export class UserCacheDto {
    */
   refreshTokenExpiresAt?: Date;
 
-  /**
-   * When this user record was created
-   */
+  // When this user record was created
   createdAt?: Date;
 
   constructor(partial: Partial<UserCacheDto>) {
