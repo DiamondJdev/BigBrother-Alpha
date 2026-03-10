@@ -4,11 +4,11 @@ import {
   ExecutionContext,
   CallHandler,
 } from "@nestjs/common";
-import { Observable } from "rxjs";
+import type { Observable } from "rxjs";
 import { tap } from "rxjs/operators";
-import { Request, Response } from "express";
+import type { Request, Response } from "express";
 import { LoggerService } from "../services/logger.service";
-import { AuthenticatedRequest } from "../../AuthenticatedRequest";
+import type { AuthenticatedRequest } from "../../AuthenticatedRequest";
 
 interface HttpError extends Error {
   status?: number;
