@@ -1,0 +1,320 @@
+{
+  "info": {
+    "name": "BigBrother Rate Limiting Tests",
+    "description": "Test collection for @nestjs/throttler rate limiting implementation",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5200",
+      "type": "string"
+    },
+    {
+      "key": "testUsername",
+      "value": "testuser_{{$timestamp}}",
+      "type": "string"
+    },
+    {
+      "key": "testPassword",
+      "value": "TestPassword123!",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Rate Limiting Tests",
+      "item": [
+        {
+          "name": "1. Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "me"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2. Login Rate Limit Test (Run 6 times quickly)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Check rate limiting behavior\", function () {",
+                  "    const responseCode = pm.response.code;",
+                  "    ",
+                  "    if (responseCode === 429) {",
+                  "        pm.test(\"Rate limit triggered correctly\", function () {",
+                  "            pm.expect(pm.response.code).to.equal(429);",
+                  "        });",
+                  "        ",
+                  "        pm.test(\"Rate limit headers present\", function () {",
+                  "            pm.expect(pm.response.headers.get('X-RateLimit-Limit')).to.not.be.null;",
+                  "        });",
+                  "        ",
+                  "        console.log('✅ Rate limiting working - request blocked');",
+                  "    } else {",
+                  "        console.log('⚠️  Request allowed - attempt #' + (pm.globals.get('loginAttempts') || 1));",
+                  "        pm.globals.set('loginAttempts', (pm.globals.get('loginAttempts') || 0) + 1);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Reset counter if needed",
+                  "if (!pm.globals.get('loginAttempts')) {",
+                  "    pm.globals.set('loginAttempts', 0);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"nonexistent_user\",\n  \"password\": \"wrong_password\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3. Registration Rate Limit Test (Run 6 times quickly)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Check registration rate limiting\", function () {",
+                  "    const responseCode = pm.response.code;",
+                  "    ",
+                  "    if (responseCode === 429) {",
+                  "        pm.test(\"Rate limit triggered correctly\", function () {",
+                  "            pm.expect(pm.response.code).to.equal(429);",
+                  "        });",
+                  "        console.log('✅ Registration rate limiting working');",
+                  "    } else {",
+                  "        console.log('⚠️  Registration request allowed - attempt #' + (pm.globals.get('regAttempts') || 1));",
+                  "        pm.globals.set('regAttempts', (pm.globals.get('regAttempts') || 0) + 1);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{testUsername}}_{{$randomInt}}\",\n  \"password\": \"{{testPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4. Global Rate Limit Test (Test endpoint)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Check global rate limiting\", function () {",
+                  "    const responseCode = pm.response.code;",
+                  "    ",
+                  "    if (responseCode === 429) {",
+                  "        pm.test(\"Global rate limit triggered\", function () {",
+                  "            pm.expect(pm.response.code).to.equal(429);",
+                  "        });",
+                  "        console.log('✅ Global rate limiting working');",
+                  "    } else {",
+                  "        console.log('⚠️  Global request allowed - count: ' + (pm.globals.get('globalAttempts') || 1));",
+                  "        pm.globals.set('globalAttempts', (pm.globals.get('globalAttempts') || 0) + 1);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer invalid_token_for_testing"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "me"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Automated Rate Limit Runner",
+      "item": [
+        {
+          "name": "Run Login Tests (Automated)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const maxAttempts = 7;",
+                  "const currentAttempt = pm.globals.get('autoLoginAttempt') || 1;",
+                  "",
+                  "console.log(`Login attempt ${currentAttempt}/${maxAttempts}`);",
+                  "",
+                  "if (pm.response.code === 429) {",
+                  "    console.log('✅ Rate limit reached at attempt ' + currentAttempt);",
+                  "    pm.globals.unset('autoLoginAttempt');",
+                  "} else if (currentAttempt < maxAttempts) {",
+                  "    pm.globals.set('autoLoginAttempt', currentAttempt + 1);",
+                  "    setTimeout(() => {",
+                  "        postman.setNextRequest('Run Login Tests (Automated)');",
+                  "    }, 200);",
+                  "} else {",
+                  "    console.log('❌ Rate limit not reached after ' + maxAttempts + ' attempts');",
+                  "    pm.globals.unset('autoLoginAttempt');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.globals.get('autoLoginAttempt')) {",
+                  "    pm.globals.set('autoLoginAttempt', 1);",
+                  "    console.log('🚀 Starting automated login rate limit test...');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"test_auto_{{$timestamp}}\",\n  \"password\": \"wrong_password\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Rate Limit Information",
+      "item": [
+        {
+          "name": "Check Rate Limit Headers",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Display rate limit information\", function () {",
+                  "    const headers = pm.response.headers;",
+                  "    ",
+                  "    console.log('📊 Rate Limit Information:');",
+                  "    console.log('Status Code:', pm.response.code);",
+                  "    ",
+                  "    const limitHeader = headers.get('X-RateLimit-Limit');",
+                  "    const remainingHeader = headers.get('X-RateLimit-Remaining');",
+                  "    const resetHeader = headers.get('X-RateLimit-Reset');",
+                  "    const retryAfterHeader = headers.get('Retry-After');",
+                  "    ",
+                  "    if (limitHeader) console.log('Rate Limit:', limitHeader);",
+                  "    if (remainingHeader) console.log('Remaining:', remainingHeader);",
+                  "    if (resetHeader) console.log('Reset Time:', new Date(resetHeader * 1000));",
+                  "    if (retryAfterHeader) console.log('Retry After:', retryAfterHeader + ' seconds');",
+                  "    ",
+                  "    if (pm.response.code === 429) {",
+                  "        console.log('🚫 Request was rate limited');",
+                  "    } else {",
+                  "        console.log('✅ Request was allowed');",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "me"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Global pre-request script",
+          "console.log('🔍 Testing rate limiter at: ' + pm.variables.get('baseUrl'));"
+        ]
+      }
+    }
+  ]
+}

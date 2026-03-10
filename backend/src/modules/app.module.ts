@@ -1,6 +1,8 @@
 import { ConfigModule } from "@nestjs/config";
 import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
+import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
+import { APP_GUARD } from "@nestjs/core";
 import { UsersModule } from "./users/users.module";
 import { AuthModule } from "./auth/auth.module";
 import { RolesModule } from "./roles/roles.module";
@@ -9,7 +11,7 @@ import { DbModule } from "./db/db.module";
 import { CommonModule } from "./common/common.module";
 import { CacheModule } from "./cache/cache.module";
 
-/** 
+/**
  * app.module is the master module that imports all other modules
  * Deleting app.module means that no other modules would be runnable
  *
@@ -22,10 +24,22 @@ import { CacheModule } from "./cache/cache.module";
       isGlobal: true,
       envFilePath: "./.env",
     }),
+    ThrottlerModule.forRoot([
+      {
+        name: "short",
+        ttl: 60000, // 1 minute = 60,000ms
+        limit: 100, // 100 requests per minute (which is less restrictive than 100 every 15 minutes)
+      },
+      {
+        name: "medium",
+        ttl: 900000, // 15 minutes = 900,000ms
+        limit: 100, // 100 requests every 15 minutes
+      },
+    ]),
     TypeOrmModule.forRoot({
       type: "postgres",
       host: process.env.DB_HOST || "localhost",
-      port: parseInt(process.env.DB_PORT || '5432'),
+      port: parseInt(process.env.DB_PORT || "5432"),
       username: process.env.DB_USERNAME || "postgres",
       password: process.env.DB_PASSWORD || "postgres",
       database: process.env.DB_NAME || "margin_dev",
@@ -39,7 +53,7 @@ import { CacheModule } from "./cache/cache.module";
         idleTimeoutMillis: 60000,
         connectionTimeoutMillis: 5000,
         acquireTimeoutMillis: 10000,
-      }
+      },
     }),
     RolesModule,
     UsersModule,
@@ -48,6 +62,12 @@ import { CacheModule } from "./cache/cache.module";
     DbModule,
     CommonModule,
     CacheModule,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
   ],
 })
 export class AppModule {}
