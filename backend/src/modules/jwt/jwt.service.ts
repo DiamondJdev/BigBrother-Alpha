@@ -2,7 +2,7 @@ import { Injectable, InternalServerErrorException } from "@nestjs/common";
 import { JwtService as NestJwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
 import * as bcrypt from "bcrypt";
-import type { SignOptions } from "jsonwebtoken";
+import type { StringValue } from "ms";
 
 export interface JwtPayload {
   sub: string; // userId
@@ -24,9 +24,7 @@ export class JwtService {
   // ----- REFRESH TOKEN -----
   generateRefreshToken(payload: JwtPayload): Promise<string> {
     return this.jwtService.signAsync(payload, {
-      expiresIn: this.configService.get<string>(
-        "JWT_REFRESH_EXP",
-      ) as unknown as SignOptions["expiresIn"]
+      expiresIn: this.configService.get<StringValue>("JWT_REFRESH_EXP"),
     });
   }
 
