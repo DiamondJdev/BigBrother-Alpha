@@ -31,7 +31,6 @@ export class DbService {
   async healthCheck(): Promise<boolean> {
     try {
       await this.userRepository.query("SELECT 1");
-      await this.userRepository.query("SELECT version()");
       return true;
     } catch {
       return false;
@@ -49,7 +48,7 @@ export class DbService {
     const cached = await this.cacheService.get<UserCacheDto[]>(
       CacheKeys.allUsers(),
     );
-		
+
     if (cached) {
       // Convert cached DTOs back to User entities
       return cached.map((dto) => this.reconstructUserFromCache(dto));
@@ -87,7 +86,8 @@ export class DbService {
   }
 
   /**
-   * Finds a user by id or username.
+   * Finds a user by id or username. 
+	 * NOTE: Excludes sensitive fields like password and refreshTokenHash
    *
    * @param uuid User id
    * @param username Username
@@ -100,31 +100,41 @@ export class DbService {
 
     // Cache is keyed by UUID only; username lookups (login path) always hit the DB.
     if (uuid) {
-      const cached = await this.cacheService.get<UserCacheDto>(
-        CacheKeys.userSafe(uuid),
-      );
-
-      if (cached) {
-        // Convert cached DTO back to full User entity by fetching sensitive fields from DB
-        return this.reconstructUserFromCache(cached);
-      }
+      const cached = await this.cacheService.get<UserCacheDto>(CacheKeys.userSafe(uuid));
+      if (cached) return this.reconstructUserFromCache(cached);
     }
 
     const user = uuid
       ? await this.userRepository.findOneBy({ id: uuid })
       : await this.userRepository.findOneBy({ username });
 
-    const resolved = user ?? null;
-    if (uuid && resolved) {
+    if (!user) return null;
+
+    if (uuid) {
       // Cache sanitized version that excludes sensitive fields
-      const safeCache = this.createUserCacheDto(resolved);
+      const safeCache = this.createUserCacheDto(user);
       await this.cacheService.set(
         CacheKeys.userSafe(uuid),
         safeCache,
         CacheTTL.USER,
       );
     }
-    return resolved;
+
+    // Always return sanitized entity — strip sensitive fields regardless of cache path
+    return this.reconstructUserFromCache(this.createUserCacheDto(user));
+  }
+
+	/**	 
+	 * Finds a user by username and returns the full entity including sensitive fields.
+	 * NOTE: Should only be used in services that require password or refresh token verification.
+	 * NOTE: Will not use cache
+	 * 
+	 * @param username 
+	 * @returns User or null if not found
+	 * @remarks This method bypasses the cache and always queries the database, since it's only used in authentication flows where we need the most up-to-date sensitive data. The public findOne method should be used for general lookups that can benefit from caching and don't require sensitive fields.
+	 */
+	async findOneSensitive(username: string): Promise<User | null> {
+    return await this.userRepository.findOneBy({ username });
   }
 
   /**
@@ -139,7 +149,7 @@ export class DbService {
       id: user.id!,
       username: user.username,
       role: user.role,
-      refreshTokenExpiresAt: user.refreshTokenExpiresAt,
+      refreshTokenExpiresAt: user.refreshTokenExpiresAt ?? undefined,
       createdAt: user.createdAt,
     });
   }
@@ -175,8 +185,7 @@ export class DbService {
    */
   async remove(uuid: string): Promise<void> {
     const result = await this.userRepository.delete({ id: uuid });
-    if (result.affected === 0)
-      throw new BadRequestException("Could not find user to delete");
+    if (result.affected === 0) throw new BadRequestException("Could not find user to delete");
     await this.cacheService.del(
       CacheKeys.userSafe(uuid),
       CacheKeys.userRole(uuid),
@@ -246,11 +255,14 @@ export class DbService {
    * @returns The current refresh token hash, or null if none is stored
    */
   async getRefreshTokenHash(userId: string): Promise<string | null> {
-    const cached = await this.cacheService.get<string>(
-      CacheKeys.refreshToken(userId),
-    );
+		// Hit cache for refresh token hash by uuid
+    const cached = await this.cacheService.get<string>(CacheKeys.refreshToken(userId));
+
     if (cached !== null) return cached;
-    const user = await this.userRepository.findOneBy({ id: userId });
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      select: { refreshTokenHash: true },
+    });
     return user?.refreshTokenHash ?? null;
   }
 
@@ -262,19 +274,16 @@ export class DbService {
    * @throws BadRequestException if user not found
    * @returns void
    */
-  async saveRefreshToken(
-    userId: string,
-    refreshTokenHash: string,
-  ): Promise<void> {
+  async saveRefreshToken(userId: string, refreshTokenHash: string): Promise<void> {
     const result = await this.userRepository.update(
       { id: userId },
       { refreshTokenHash },
     );
 
-    if (result.affected === 0)
-      throw new BadRequestException(
-        "Could not find user to save refresh token",
-      );
+    if (result.affected === 0) {
+			throw new BadRequestException("Could not find user to save refresh token");
+		}
+
     // Cache the hash and evict the stale full-user record in a single round trip.
     await this.cacheService.set(
       CacheKeys.refreshToken(userId),
@@ -293,7 +302,7 @@ export class DbService {
   async clearRefreshToken(userId: string): Promise<void> {
     const result = await this.userRepository.update(
       { id: userId },
-      { refreshTokenHash: "", refreshTokenExpiresAt: "" },
+      { refreshTokenHash: null, refreshTokenExpiresAt: null },
     );
 
     if (result.affected === 0)

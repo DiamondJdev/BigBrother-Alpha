@@ -44,9 +44,7 @@ export class AuthService {
     refreshToken: string;
     user: { id: string; username: string; role: string };
   }> {
-    // Doesn't check cache since cache is keyed by UUID
-    const user: User | null = await this.dbService.findOne(
-      undefined,
+    const user: User | null = await this.dbService.findOneSensitive(
       loginUserDto.username,
     );
     if (!user) {

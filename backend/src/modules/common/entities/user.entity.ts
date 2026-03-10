@@ -31,9 +31,9 @@ export class User {
   })
   role: string;
 
-  @Column({ length: 512, nullable: true })
-  refreshTokenHash?: string;
+  @Column({ type: "varchar", length: 512, nullable: true })
+  refreshTokenHash?: string | null;
 
   @Column({ type: "timestamptz", nullable: true })
-  refreshTokenExpiresAt?: Date;
+  refreshTokenExpiresAt?: Date | null;
 }
