@@ -9,16 +9,18 @@ import { DbModule } from "./db/db.module";
 import { CommonModule } from "./common/common.module";
 import { CacheModule } from "./cache/cache.module";
 
-/** DO NOT DELETE
+/** 
  * app.module is the master module that imports all other modules
  * Deleting app.module means that no other modules would be runnable
  *
+ * This module also sets up the database connection using TypeORM and loads environment variables using ConfigModule
+ * It also configures the database connection with connection pooling and logging settings based on the environment
  */
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ["./src/.env.production", "./src/.env", "./.env"],
+      envFilePath: "./.env",
     }),
     TypeOrmModule.forRoot({
       type: "postgres",

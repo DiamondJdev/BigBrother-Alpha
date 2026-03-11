@@ -3,7 +3,6 @@ import { IsString, IsNotEmpty, MaxLength } from "class-validator";
 export class loginUserDto {
   @IsNotEmpty({ message: "Username is required" })
   @IsString({ message: "Username must be a string" })
-  // @Length(3, 64, { message: "Username must be more than 3 and less than 64 characters" })
   @MaxLength(128, { message: "Username must be less than 128 characters" })
   username: string;
 

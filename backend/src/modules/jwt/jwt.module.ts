@@ -1,17 +1,19 @@
 import { Module } from "@nestjs/common";
-import { JwtModule as NestJwtModule } from "@nestjs/jwt";
+import { JwtModule as NestJwtModule, JwtModuleOptions } from "@nestjs/jwt";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { JwtService } from "./jwt.service";
+import type { StringValue } from "ms";
 
 @Module({
   imports: [
     NestJwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => {
+      useFactory: (configService: ConfigService): JwtModuleOptions => {
         const secret = configService.get<string>("JWT_SECRET");
-        const accessExp = configService.get<string>("JWT_ACCESS_EXP");
-        const refreshExp = configService.get<string>("JWT_REFRESH_EXP");
+        const accessExp = configService.get<StringValue>("JWT_ACCESS_EXP");
+        const refreshExp = configService.get<StringValue>("JWT_REFRESH_EXP");
+
         if (!secret) {
           throw new Error(
             "JWT_SECRET is not defined in the environment variables",
@@ -32,7 +34,7 @@ import { JwtService } from "./jwt.service";
           secret,
           signOptions: {
             algorithm: "HS256",
-            expiresIn: accessExp as any,
+            expiresIn: accessExp,
           },
         };
       },

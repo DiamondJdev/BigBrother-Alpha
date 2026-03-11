@@ -1,13 +1,75 @@
 # Backend TODOs (Simplified for Junior Developers)
 
 This file is a simple implementation guide for the backend team.
-It is split into **4 parallel tracks** so multiple developers can work at the same time.
+It is split into **5 parallel tracks** so multiple developers can work at the same time.
 
 How to use this file:
 
 - Pick one track per developer (or pair).
 - Complete items top-to-bottom inside that track.
 - If blocked by another track, mark it and switch to the next unblocked item.
+
+---
+
+## Track 0 — Security Vulnerabilities
+
+Goal: Fix critical and high severity security issues identified in security review
+
+### 0.1 Critical Security Fixes (Fix Immediately)
+
+- [ ] **CRITICAL: Fix CORS Configuration**
+  - Replace `app.enableCors({ origin: true, credentials: true })` in `src/main.ts:35`
+  - Specify exact allowed origins: `origin: ['http://localhost:3000', 'https://yourdomain.com']`
+  - **Impact:** Currently allows ALL domains access with credentials (complete CORS bypass)
+
+- [x] **CRITICAL: Add Rate Limiting**
+  - Install `@nestjs/throttler` package
+  - Configure rate limiting in `main.ts` (e.g., 100 requests per 15 minutes)
+  - Add stricter limits for auth endpoints (e.g., 5 login attempts per minute)
+  - **Impact:** Currently vulnerable to brute force and DDoS attacks
+
+- [ ] **CRITICAL: Add Security Headers**
+  - Install `helmet` middleware
+  - Configure in `main.ts` for XSS, clickjacking, MIME sniffing protection
+  - **Impact:** Missing protection against common web attacks
+
+### 0.2 High Priority Security Fixes
+
+- [x] **Fix Username Enumeration**
+  - Standardize auth logging in `src/modules/auth/auth.service.ts:51-54`
+  - Ensure identical response times for "user not found" vs "wrong password"
+  - Remove distinguishable debug logging patterns
+  - **Impact:** Attackers can enumerate valid usernames
+
+- [x] **Simplify Environment Configuration**
+  - Consolidate environment file paths in `src/modules/app.module.ts:21`
+  - Use single, clear environment file pattern
+  - **Impact:** Configuration confusion, wrong secrets loaded
+
+### 0.3 Medium Priority Security Fixes
+
+- [x] **Fix Async File Operations**
+  - Replace `fs.appendFileSync()` with async operations in `src/modules/common/logging/services/logger.service.ts:52,56`
+  - **Impact:** Performance degradation under high load
+
+- [ ] **Fix Timing Attack Vector**
+  - Improve placeholder hash in `src/modules/auth/auth.service.ts:58-60`
+  - Use proper bcrypt hash as placeholder
+  - **Impact:** Timing-based user enumeration
+
+### Security Verification Checklist
+
+Before marking Track 0 complete, verify:
+
+- [ ] CORS only allows specific trusted origins
+- [x] Rate limiting active on all endpoints (test with rapid requests)
+- [ ] Security headers present in responses (check with browser dev tools)
+- [ ] Auth endpoints have identical response patterns/timing
+- [x] All cookies marked as secure and httpOnly
+- [x] No hardcoded secrets remain in codebase
+- [x] No synchronous file operations in hot paths
+
+**Priority:** This track should be worked on immediately and completed before any other development work.
 
 ---
 
@@ -206,31 +268,6 @@ Why this matters:
 Done means:
 
 - CI blocks release when critical suites fail.
-
----
-
-## Simple Parallel Plan
-
-Week 1 (parallel)
-
-- Track 1 and Track 2
-
-Week 2 (parallel)
-
-- Track 3 starts once queue/storage from Track 1 are ready
-
-Week 3 (parallel)
-
-- Track 4 starts once Track 3 core flow exists
-
----
-
-## Team Assignment Template (fill this in)
-
-- [ ] Track 1 owner: ________
-- [ ] Track 2 owner: ________
-- [ ] Track 3 owner: ________
-- [ ] Track 4 owner: ________
 
 ---
 

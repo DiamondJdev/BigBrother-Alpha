@@ -48,10 +48,7 @@ export class AuthService {
       loginUserDto.username,
     );
     if (!user) {
-      this.logger.debug(
-        `Could not find user`,
-        "AuthService",
-      );
+      this.logger.debug(`Could not find user`, "AuthService");
     }
 
     const comparisonHash = user
@@ -68,8 +65,7 @@ export class AuthService {
     }
 
     // Needed to satisfy type system, but id is never null
-    if (!user.id)
-      throw new InternalServerErrorException("Error processing user data");
+    if (!user.id) throw new InternalServerErrorException("Error processing user data");
 
     const tokens = await this.jwtService.rotateTokens(user.id, user.role);
     await this.dbService.saveRefreshToken(user.id, tokens.refreshTokenHash);
