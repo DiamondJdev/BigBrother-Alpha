@@ -320,10 +320,7 @@ export class LoggerService implements NestLoggerService {
 	}
 	
 	warn(message: any, context?: string): void {
-		if (!this.shouldLogEntry(LogLevel.WARN)) {
-			return;
-		}
-
+		// Always log warnings - no backpressure filtering
 		this.writeLog({
 			timestamp: this.getTimestamp(),
 			level: LogLevel.WARN,
