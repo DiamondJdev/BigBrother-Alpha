@@ -2,7 +2,7 @@
 
 # 🚀 NestJS Template
 
-**A production-ready, opinionated NestJS backend template with JWT authentication, role-based access control, structured logging, and SQLite persistence — ready to clone and extend.**
+**A production-ready, opinionated NestJS backend template with JWT authentication, role-based access control, structured logging, and PostgreSQL persistence — ready to clone and extend.**
 
 [![NestJS](https://img.shields.io/badge/NestJS-11.x-E0234E?style=for-the-badge&logo=nestjs&logoColor=white)](https://nestjs.com)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
