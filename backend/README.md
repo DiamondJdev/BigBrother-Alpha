@@ -280,10 +280,10 @@ Edit `.env` with your secrets (see [Environment Variables](#-environment-variabl
 ### 3. Start the Development Server
 
 ```bash
-npm run start:dev
+npm run dev
 ```
 
-The dev server starts at **`http://localhost:8080`** (the `--port 8080` flag in `start:dev` overrides the default). In production (`npm start` / `npm run start:prod`), the server listens on the port defined by `PORT` in your `.env` file, which defaults to **`5200`**.
+The dev server starts at **`http://localhost:8080`**. In production (`npm start` / `npm run start:prod`), the server listens on the port defined by `PORT` in your `.env` file, which defaults to **`5200`**.
 
 ### 4. Verify It's Working
 
