@@ -336,7 +336,7 @@ Create a `.env` file in the project root. The application reads all config via `
 | `DB_PASSWORD` | **Yes** | — | PostgreSQL password |
 | `DB_NAME` | No | `margin_dev` | PostgreSQL database name |
 | `JWT_SECRET` | **Yes** | — | Secret key for signing access tokens |
-| `JWT_EXPIRATION` | No | `15m` | Access token TTL (e.g., `15m`, `1h`) |
+| `JWT_ACCESS_EXP` | No | `15m` | Access token TTL (e.g., `15m`, `1h`) |
 | `JWT_REFRESH_EXP` | No | `7d` | Refresh token TTL (e.g., `7d`, `30d`) |
 | `NODE_ENV` | No | `development` | Set to `production` to suppress console logs |
 
@@ -347,7 +347,7 @@ PORT=5200
 
 # Generate a strong secret: openssl rand -hex 64
 JWT_SECRET=your-super-secret-key-change-me-in-production
-JWT_EXPIRATION=15m
+JWT_ACCESS_EXP=15m
 JWT_REFRESH_EXP=7d
 
 NODE_ENV=development
