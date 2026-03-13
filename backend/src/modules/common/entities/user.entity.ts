@@ -24,12 +24,8 @@ export class User {
   @Column({ length: 255 })
   password: string;
 
-  @Column({
-    type: "enum",
-    enum: ["user", "admin"],
-    default: "user",
-  })
-  role: string;
+  @Column("text", { array: true, default: ["user"] })
+  roles: string[];
 
   @Column({ type: "varchar", length: 512, nullable: true })
   refreshTokenHash?: string | null;

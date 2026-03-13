@@ -12,6 +12,6 @@ export function getAllowedRoles(userRole: string): string[] {
     return roleHierarchy[userRole as UserRole] || [];
 }
     
-export function isValidRole(role: string): boolean {
-    return Object.values(UserRole).includes(role as UserRole);
+export function isValidRoles(roles: string[]): boolean {
+    return roles.every(role => Object.values(UserRole).includes(role as UserRole));
 }

@@ -10,6 +10,7 @@ import { JwtModule } from "./jwt/jwt.module";
 import { DbModule } from "./db/db.module";
 import { CommonModule } from "./common/common.module";
 import { CacheModule } from "./cache/cache.module";
+import { ApprovalsModule } from "./approvals/approval.module";
 
 /**
  * app.module is the master module that imports all other modules
@@ -62,6 +63,7 @@ import { CacheModule } from "./cache/cache.module";
     DbModule,
     CommonModule,
     CacheModule,
+    ApprovalsModule,
   ],
   providers: [
     {

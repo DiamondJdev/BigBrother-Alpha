@@ -46,7 +46,7 @@ export class AuthService {
     message: string;
     accessToken: string;
     refreshToken: string;
-    user: { id: string; username: string; role: string };
+    user: { id: string; username: string; roles: string[] };
   }> {
     const user: User | null = await this.dbService.findOneSensitive(
       loginUserDto.username,
@@ -69,7 +69,7 @@ export class AuthService {
     // Needed to satisfy type system, but id is never null
     if (!user.id) throw new InternalServerErrorException("Error processing user data");
 
-    const tokens = await this.jwtService.rotateTokens(user.id, user.role);
+    const tokens = await this.jwtService.rotateTokens(user.id, user.roles);
     await this.dbService.saveRefreshToken(user.id, tokens.refreshTokenHash);
 
     this.logger.logUserStats("login", user.id, { username: user.username });
@@ -81,7 +81,7 @@ export class AuthService {
       user: {
         id: user.id,
         username: user.username,
-        role: user.role,
+        roles: user.roles,
       },
     };
   }

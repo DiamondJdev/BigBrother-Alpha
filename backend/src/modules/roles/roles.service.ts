@@ -8,10 +8,10 @@ export class RolesService {
 	async getRole(userId: string): Promise<string> {
 		const user = await this.dbService.findOne(userId);
 		if (!user) throw new NotFoundException({ message: 'User not found' });
-		return user.role;
+		return user.roles[0] || 'user';
 	}
 
     async update(uuid: string, role: string): Promise<void> {
-        await this.dbService.updateRole(uuid, role);
+        await this.dbService.updateRole(uuid, [role]);
     } 
 }

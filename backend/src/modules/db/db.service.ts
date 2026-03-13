@@ -10,7 +10,7 @@ import { QueryFailedError, Repository } from "typeorm";
 import { User } from "../common/entities/user.entity";
 import { UpdateUserDto } from "../common/dto/updateUser.dto";
 import { UserCacheDto } from "../common/dto/userCache.dto";
-import { isValidRole } from "../common/utils/roleChecker";
+import { isValidRoles } from "../common/utils/roleChecker";
 import { CacheService } from "../cache/cache.service";
 import { CacheKeys } from "../cache/constants/cache-keys";
 import { CacheTTL } from "../cache/constants/cache-ttl";
@@ -220,20 +220,20 @@ export class DbService {
   }
 
   /**
-   * Updates a user's role.
+   * Updates a user's roles
    *
    * @param uuid User id
-   * @param role New role
-   * @throws BadRequestException if role is invalid or user not found
+   * @param roles New roles
+   * @throws BadRequestException if roles are invalid or user not found
    * @returns void
    */
-  async updateRole(uuid: string, role: string): Promise<void> {
-    if (!isValidRole(role)) throw new BadRequestException("Invalid role");
+  async updateRole(uuid: string, roles: string[]): Promise<void> {
+    if (!isValidRoles(roles)) throw new BadRequestException("Invalid roles");
 
-    const result = await this.userRepository.update({ id: uuid }, { role });
+    const result = await this.userRepository.update({ id: uuid }, { roles });
 
     if (result.affected === 0)
-      throw new BadRequestException("Could not find user to update role");
+      throw new BadRequestException("Could not find user to update roles");
     await this.cacheService.del(
       CacheKeys.userSafe(uuid),
       CacheKeys.userRole(uuid),
