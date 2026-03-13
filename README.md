@@ -23,6 +23,10 @@ The system supports two primary user roles:
   - **Tailwind CSS** for styling  
   https://tailwindcss.com/
 
+## Run
+- From the repository root, use `npm run dev`, `npm run start`, or `npm run build`.
+- The actual frontend app lives in `frontendLocal/`, and the root scripts forward commands there.
+
 ## Additional Infrastructure (Planned)
 - **Docker** — Sandbox environment for software testing
 - **Cloud Agent** — Remote analysis system

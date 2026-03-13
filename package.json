@@ -1,0 +1,11 @@
+{
+  "name": "bigbrother-alpha-root",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix frontendLocal run dev",
+    "start": "npm --prefix frontendLocal run start",
+    "build": "npm --prefix frontendLocal run build",
+    "lint": "npm --prefix frontendLocal run lint",
+    "preview": "npm --prefix frontendLocal run preview"
+  }
+}
