@@ -1,4 +1,5 @@
 import { IsDate, IsString } from "class-validator";
+import { UserRole } from "src/modules/common/utils/userRole.enum";
 
 /**
  * DTO for returning user data without sensitive information 
@@ -15,5 +16,5 @@ export class userReturnDto {
     createdAt: Date;
 
     @IsString()
-    role: string;
+    roles: UserRole[];
 }

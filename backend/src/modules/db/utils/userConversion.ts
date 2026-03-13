@@ -13,6 +13,6 @@ export function toUserReturnDto(user: User): userReturnDto {
 		id: user.id as string,
 		username: user.username,
 		createdAt: user.createdAt as Date,
-		role: user.roles[0],
+		roles: user.roles,
 	};
 }
