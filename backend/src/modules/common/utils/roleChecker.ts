@@ -21,9 +21,18 @@ export function getAllowedRoles(userRoles: UserRole[]): UserRole[] {
 
     return Array.from(allowed);
 }
-    
+
+export function optimizeRoles(roles: UserRole[]): UserRole[] {
+    // Remove redundant roles (e.g., if ADMIN is present, remove USER)
+    if (roles.includes(UserRole.ADMIN)) {
+        return [UserRole.ADMIN];
+    }
+    return roles.filter((role, index) => roles.indexOf(role) === index);
+}
+
 export function isValidRoles(roles: UserRole[]): boolean {
     return roles.every((role) =>
-        Object.values(UserRole).includes(role),
+        Object.values(UserRole).includes(role)
     );
 }
+
