@@ -64,14 +64,13 @@ export class UsersController {
 		// Only allow non-admin users to update their own record
 		if (!hasPermission(req.user.roles, [UserRole.ADMIN]) && req.user.id !== uuid) {
 			throw new ForbiddenException({ message: 'Insufficient permissions to update this user' });
-		} else {
-			try {
-				await this.usersService.update(uuid, updateUserDto);
-			} catch (error) {
-				if (error instanceof NotFoundException) throw new NotFoundException({ message: 'User not found' });
-				throw error;
-			}
-			return { message: 'User updated successfully' };
 		}
+		try {
+			await this.usersService.update(uuid, updateUserDto);
+		} catch (error) {
+			if (error instanceof NotFoundException) throw new NotFoundException({ message: 'User not found' });
+			throw error;
+		}
+		return { message: 'User updated successfully' };
 	}
 }
