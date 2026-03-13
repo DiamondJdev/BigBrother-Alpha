@@ -208,41 +208,46 @@ src/
 
 ### Data Model
 
-```
-┌─────────────────────────────────────────┐
-│                  User                    │
-├──────────────┬──────────────────────────┤
-│ id           │ UUID (PK, auto-generated) │
-│ username     │ VARCHAR(64) UNIQUE        │
-│ password     │ VARCHAR (bcrypt hash)     │
-│ role         │ VARCHAR (default: 'user') │
-│ refreshTokenHash │ VARCHAR (bcrypt hash, nullable) │
-│ createdAt        │ TIMESTAMP (auto-set)            │
-└──────────────┴──────────────────────────┘
+```mermaid
+classDiagram
+  class User {
+    <<Entity>>
+    +UUID id
+    +VARCHAR(64) username
+    +VARCHAR password
+    +VARCHAR role
+    +VARCHAR refreshTokenHash
+    +TIMESTAMP createdAt
+  }
 ```
 
 ### Request Lifecycle
 
-```
-HTTP Request
-     │
-     ▼
-LoggingInterceptor     ← logs method, url, duration, userId
-     │
-     ▼
-JwtAuthGuard           ← validates Bearer token (protected routes)
-     │
-     ▼
-RolesGuard             ← checks @Roles() decorator (admin routes)
-     │
-     ▼
-ValidationPipe         ← strips unknown props, validates DTO
-     │
-     ▼
-Controller → Service → DbService → SQLite
-     │
-     ▼
-HTTP Response (+ logged by interceptor)
+```mermaid
+sequenceDiagram
+  participant Client
+  participant LoggingInterceptor
+  participant JwtAuthGuard
+  participant RolesGuard
+  participant ValidationPipe
+  participant Controller
+  participant Service
+  participant DbService
+  participant Database
+
+  Client->>LoggingInterceptor: HTTP Request
+  LoggingInterceptor->>JwtAuthGuard: (protected route) validate Bearer token
+  JwtAuthGuard->>RolesGuard: check @Roles()
+  RolesGuard->>ValidationPipe: validate + strip unknown props
+  ValidationPipe->>Controller: forward request
+  Controller->>Service: business logic
+  Service->>DbService: query/update
+  DbService->>Database: SQL (TypeORM)
+  Database-->>DbService: result
+  DbService-->>Service: result
+  Service-->>Controller: response data
+  Controller-->>LoggingInterceptor: response
+  LoggingInterceptor-->>Client: HTTP response
 ```
 
 ---
@@ -463,39 +468,25 @@ For production or when running `npm start`, the base URL is `http://localhost:52
 
 This template uses a **dual-token** authentication strategy:
 
-```
-┌──────────┐         ┌──────────────┐         ┌────────────────┐
-│  Client  │         │   NestJS API │         │    Database    │
-└──────────┘         └──────────────┘         └────────────────┘
-     │                      │                          │
-     │   POST /auth/login    │                          │
-     │──────────────────────▶│                          │
-     │                      │   findOne(username)       │
-     │                      │─────────────────────────▶│
-     │                      │◀─────────────────────────│
-     │                      │   bcrypt.compare()        │
-     │                      │   rotateTokens()          │
-     │                      │   saveRefreshToken(hash)  │
-     │                      │─────────────────────────▶│
-     │ { accessToken,        │                          │
-     │   refreshToken }      │                          │
-     │◀──────────────────────│                          │
-     │                      │                          │
-     │  (use accessToken     │                          │
-     │   for API calls)      │                          │
-     │                      │                          │
-     │  PATCH /auth/refresh  │                          │
-     │  Bearer: accessToken  │                          │
-     │  body: refreshToken   │                          │
-     │──────────────────────▶│                          │
-     │                      │  compare(token, hash)    │
-     │                      │─────────────────────────▶│
-     │                      │   rotateTokens()          │
-     │                      │   saveNewHash()           │
-     │                      │─────────────────────────▶│
-     │ { new accessToken,    │                          │
-     │   new refreshToken }  │                          │
-     │◀──────────────────────│                          │
+```mermaid
+sequenceDiagram
+  participant Client
+  participant NestAPI
+  participant Database
+
+  Client->>NestAPI: POST /auth/login (username/password)
+  NestAPI->>Database: findOne(username)
+  Database-->>NestAPI: user record
+  NestAPI->>NestAPI: bcrypt.compare()
+  NestAPI->>NestAPI: rotateTokens()
+  NestAPI->>Database: saveRefreshToken(hash)
+  NestAPI-->>Client: {accessToken, refreshToken}
+
+  Client->>NestAPI: PATCH /auth/refresh (Bearer + refreshToken)
+  NestAPI->>Database: compare(refreshToken, hash)
+  NestAPI->>NestAPI: rotateTokens()
+  NestAPI->>Database: saveNewHash()
+  NestAPI-->>Client: {accessToken, refreshToken}
 ```
 
 **Token Details:**
@@ -594,8 +585,6 @@ export class MyService {
 }
 ```
 
-> See [`LOGGING.md`](./LOGGING.md) for the full logging documentation.
-
 ---
 
 ## 🧪 Testing
@@ -646,28 +635,6 @@ const module = await Test.createTestingModule({
 
 ---
 
-## 🔄 Replacing SQLite with PostgreSQL
-
-SQLite is used for quick local setup. To swap to PostgreSQL:
-
-1. Install the driver: `npm install pg`
-2. Update the TypeORM config in `app.module.ts`:
-
-```typescript
-TypeOrmModule.forRoot({
-  type: 'postgres',
-  host: process.env.DB_HOST,
-  port: parseInt(process.env.DB_PORT ?? '5432'),
-  username: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  autoLoadEntities: true,
-  synchronize: process.env.NODE_ENV !== 'production', // use migrations in prod
-})
-```
-
----
-
 ## 🔌 WebSocket Support
 
 Socket.io and `@nestjs/websockets` are pre-installed. To add a WebSocket gateway:
@@ -690,11 +657,3 @@ Contributions are welcome! Please follow these steps:
 4. Ensure all tests pass: `npm test`
 5. Lint your code: `npm run lint`
 6. Open a Pull Request describing your changes
-
----
-
-<div align="center">
-
-Made with ❤️ by [Cameron Ginther](https://github.com/DiamondJdev)
-
-</div>
