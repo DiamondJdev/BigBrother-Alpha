@@ -1,4 +1,4 @@
-import { IsDate, IsString } from "class-validator";
+import { IsArray, IsDate, IsEnum, IsString } from "class-validator";
 import { UserRole } from "src/modules/common/utils/userRole.enum";
 
 /**
@@ -15,6 +15,7 @@ export class userReturnDto {
     @IsDate()
     createdAt: Date;
 
-    @IsString()
+    @IsArray()
+    @IsEnum(UserRole, { each: true })
     roles: UserRole[];
 }
