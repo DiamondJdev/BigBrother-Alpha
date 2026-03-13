@@ -11,6 +11,9 @@ import { DbModule } from "./db/db.module";
 import { CommonModule } from "./common/common.module";
 import { CacheModule } from "./cache/cache.module";
 import { ApprovalsModule } from "./approvals/approval.module";
+import { QueueModule } from "./queue/queue.module";
+import { ObjectStorageModule } from "./object-storage/object-storage.module";
+import * as Joi from 'joi';
 
 /**
  * app.module is the master module that imports all other modules
@@ -24,6 +27,24 @@ import { ApprovalsModule } from "./approvals/approval.module";
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: "./.env",
+      validationSchema: Joi.object({
+        JWT_SECRET: Joi.string().required(),
+        DB_HOST: Joi.string().required(),
+        DB_PORT: Joi.number().required(),
+        DB_USERNAME: Joi.string().required(),
+        DB_PASSWORD: Joi.string().required(),
+        DB_NAME: Joi.string().required(),
+        UPSTASH_REDIS_REST_URL: Joi.string().required(),
+        UPSTASH_REDIS_REST_TOKEN: Joi.string().required(),
+        AWS_ACCESS_KEY_ID: Joi.string().required(),
+        AWS_SECRET_ACCESS_KEY: Joi.string().required(),
+        AWS_REGION: Joi.string().required(),
+        S3_BUCKET: Joi.string().required(),
+      }),
+      validationOptions: {
+        allowUnknown: true,
+        abortEarly: false,
+      },
     }),
     ThrottlerModule.forRoot([
       {
@@ -64,6 +85,8 @@ import { ApprovalsModule } from "./approvals/approval.module";
     CommonModule,
     CacheModule,
     ApprovalsModule,
+    QueueModule,
+    ObjectStorageModule,
   ],
   providers: [
     {

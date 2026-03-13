@@ -1,12 +1,16 @@
 import { Controller, Get, HttpCode, HttpStatus } from '@nestjs/common';
 import { DbService } from '../../../db/db.service';
 import { CacheService } from '../../../cache/cache.service';
+import { QueueService } from '../../../queue/queue.service';
+import { ObjectStorageService } from '../../../object-storage/object-storage.service';
 import { LoggerService } from '../../logging/services/logger.service';
 
 @Controller()
 export class HealthController {	constructor(
 		private readonly dbService: DbService,
 		private readonly cacheService: CacheService,
+		private readonly queueService: QueueService,
+		private readonly objectStorageService: ObjectStorageService,
 		private readonly logger: LoggerService,
 	) {}
 	
@@ -25,6 +29,12 @@ export class HealthController {	constructor(
 		// Upstash Redis status
 		let cacheStatus = 'unhealthy';
 		let cacheLatency = null as number | null;
+		// Queue status
+		let queueStatus = 'unhealthy';
+		let queueLatency = null as number | null;
+		// Object storage status
+		let storageStatus = 'unhealthy';
+		let storageLatency = null as number | null;
 
 		const start = Date.now();
 		this.logger.debug(`Performing health check...`, "HealthController");
@@ -43,6 +53,16 @@ export class HealthController {	constructor(
 		const cacheAlive = await this.cacheService.ping();
 		cacheLatency = Date.now() - cacheStart;
 		cacheStatus = cacheAlive && cacheLatency < 1000 ? 'healthy' : 'unhealthy';
+
+		const queueStart = Date.now();
+		const queueAlive = await this.queueService.ping();
+		queueLatency = Date.now() - queueStart;
+		queueStatus = queueAlive && queueLatency < 1000 ? 'healthy' : 'unhealthy';
+
+		const storageStart = Date.now();
+		const storageAlive = await this.objectStorageService.ping();
+		storageLatency = Date.now() - storageStart;
+		storageStatus = storageAlive && storageLatency < 1000 ? 'healthy' : 'unhealthy';
 		
 		// TODO: Move response formatting to DTO and use DTO in logging and return 
 		return {
@@ -55,6 +75,14 @@ export class HealthController {	constructor(
 			cache: {
 				status: cacheStatus,
 				latency: cacheLatency + ' ms',
+			},
+			queue: {
+				status: queueStatus,
+				latency: queueLatency + ' ms',
+			},
+			storage: {
+				status: storageStatus,
+				latency: storageLatency + ' ms',
 			},
 			backend: {
 				status: backendStatus,
