@@ -6,7 +6,7 @@ import type { StringValue } from "ms";
 
 export interface JwtPayload {
   sub: string; // userId
-  role: string; // user role
+  roles: string[]; // user roles
 }
 
 @Injectable()
@@ -92,8 +92,8 @@ export class JwtService {
   }
 
   // ----- TOKEN ROTATION -----
-  async rotateTokens(userId: string, role: string) {
-    const payload: JwtPayload = { sub: userId, role };
+  async rotateTokens(userId: string, roles: string[]) {
+    const payload: JwtPayload = { sub: userId, roles };
 
     const accessToken = await this.generateAccessToken(payload);
     const refreshToken = await this.generateRefreshToken(payload);
