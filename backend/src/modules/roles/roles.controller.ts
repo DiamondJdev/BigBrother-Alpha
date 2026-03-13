@@ -3,7 +3,6 @@ import {
   Get,
   HttpCode,
   HttpStatus,
-  NotFoundException,
   Param,
   UseGuards,
   Request,
@@ -26,7 +25,6 @@ export class RolesController {
     @Request() req: AuthenticatedRequest,
   ): Promise<{ message: string; roles: UserRole[] }> {
     const roles = await this.rolesService.getRoles(req.user.id);
-    if (!roles) throw new NotFoundException({ message: "User not found" });
     return {
       message: "Roles retrieved successfully",
       roles: roles,
@@ -41,7 +39,6 @@ export class RolesController {
     @Param("uuid") uuid: string,
   ): Promise<{ message: string; roles: UserRole[] }> {
     const roles = await this.rolesService.getRoles(uuid);
-    if (!roles) throw new NotFoundException({ message: "User not found" });
     return {
       message: "Roles retrieved successfully",
       roles: roles,
