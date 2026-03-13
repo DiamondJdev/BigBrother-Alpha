@@ -12,6 +12,10 @@ import { User } from "../common/entities/user.entity";
 import type { AuthenticatedRequest } from "../common/AuthenticatedRequest";
 import { LoggerService } from "../common/logging/services/logger.service";
 
+// Pre-generated dummy bcrypt hash with cost factor 12 for timing-attack mitigation
+const DUMMY_BCRYPT_HASH =
+  "$2b$12$C/.vJyoSgGJE0E7E5Wdl..iRS0LlwM651c01qmPvvrLpzjAU6Yews";
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -51,9 +55,7 @@ export class AuthService {
       this.logger.debug(`Could not find user`, "AuthService");
     }
 
-    const comparisonHash = user
-      ? user.password
-      : "$2b$12$invalidhashinvalidhas$2b$12$invalidhashinvalidhas";
+    const comparisonHash = user ? user.password : DUMMY_BCRYPT_HASH;
     const isMatch = await bcrypt.compare(loginUserDto.password, comparisonHash);
 
     if (!user || !isMatch) {
