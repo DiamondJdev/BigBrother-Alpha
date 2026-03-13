@@ -5,6 +5,7 @@ import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { RolesGuard } from '../common/flow/roles.guard';
 import { Roles } from '../common/flow/roles.decorator';
 import { UserRole } from '../common/utils/userRole.enum';
+import { hasPermission } from '../common/utils/roleChecker';
 import type { AuthenticatedRequest } from '../common/AuthenticatedRequest';
 
 @Controller('users')
@@ -25,7 +26,7 @@ export class UsersController {
 				id: user.id,
 				username: user.username,
 				createdAt: user.createdAt,
-				role: user.role,
+				role: user.roles,
 			})),
 		};
 	}
@@ -39,7 +40,7 @@ export class UsersController {
 			message: 'User retrieved successfully',
 			id: req.user.id,
 			username: req.user.username,
-			role: req.user.role,
+			role: req.user.roles[0],
 		};
 	}
 
@@ -61,16 +62,16 @@ export class UsersController {
 		@Request() req: AuthenticatedRequest,
 	) {
 		// Only allow non-admin users to update their own record
-		if (req.user.role !== UserRole.ADMIN && req.user.id !== uuid) {
+		if (!hasPermission(req.user.roles, [UserRole.ADMIN]) && req.user.id !== uuid) {
 			throw new ForbiddenException({ message: 'Insufficient permissions to update this user' });
+		} else {
+			try {
+				await this.usersService.update(uuid, updateUserDto);
+			} catch (error) {
+				if (error instanceof NotFoundException) throw new NotFoundException({ message: 'User not found' });
+				throw error;
+			}
+			return { message: 'User updated successfully' };
 		}
-
-		try {
-			await this.usersService.update(uuid, updateUserDto);
-		} catch (error) {
-			if (error instanceof NotFoundException) throw new NotFoundException({ message: 'User not found' });
-			throw error;
-		}
-		return { message: 'User updated successfully' };
 	}
 }

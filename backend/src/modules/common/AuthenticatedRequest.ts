@@ -3,7 +3,7 @@ import { UserRole } from "./utils/userRole.enum";
 export interface AuthenticatedRequest {
 	user: {
 		id: string;
-		role: UserRole;
+		roles: UserRole[];
 		username: string;
 	};
 	cookies?: {

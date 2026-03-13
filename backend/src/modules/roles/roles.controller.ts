@@ -24,12 +24,12 @@ export class RolesController {
   @HttpCode(HttpStatus.OK)
   async getUserRole(
     @Request() req: AuthenticatedRequest,
-  ): Promise<{ message: string; role: string }> {
-    const role = await this.rolesService.getRole(req.user.id);
-    if (!role) throw new NotFoundException({ message: "User not found" });
+  ): Promise<{ message: string; roles: UserRole[] }> {
+    const roles = await this.rolesService.getRoles(req.user.id);
+    if (!roles) throw new NotFoundException({ message: "User not found" });
     return {
-      message: "Role retrieved successfully",
-      role: role,
+      message: "Roles retrieved successfully",
+      roles: roles,
     };
   }
 
@@ -39,12 +39,12 @@ export class RolesController {
   @HttpCode(HttpStatus.OK)
   async getRole(
     @Param("uuid") uuid: string,
-  ): Promise<{ message: string; role: string }> {
-    const role = await this.rolesService.getRole(uuid);
-    if (!role) throw new NotFoundException({ message: "User not found" });
+  ): Promise<{ message: string; roles: UserRole[] }> {
+    const roles = await this.rolesService.getRoles(uuid);
+    if (!roles) throw new NotFoundException({ message: "User not found" });
     return {
-      message: "Role retrieved successfully",
-      role: role,
+      message: "Roles retrieved successfully",
+      roles: roles,
     };
   }
 
