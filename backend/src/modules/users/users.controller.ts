@@ -62,9 +62,9 @@ export class UsersController {
 		@Request() req: AuthenticatedRequest,
 	) {
 		// Only allow non-admin users to update their own record
-		if (!hasPermission(req.user.roles, [UserRole.ADMIN]) && req.user.id !== uuid) {
+		if (!hasPermission(req.user.roles, [UserRole.ADMIN]) && req.user.id !== uuid)
 			throw new ForbiddenException({ message: 'Insufficient permissions to update this user' });
-		}
+		
 		try {
 			await this.usersService.update(uuid, updateUserDto);
 		} catch (error) {
