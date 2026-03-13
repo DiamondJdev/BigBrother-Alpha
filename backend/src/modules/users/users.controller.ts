@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Body, Patch, Delete, UseGuards, Request, HttpCode, HttpStatus, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Param, Body, Patch, Delete, UseGuards, Request, HttpCode, HttpStatus, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { DbService } from '../db/db.service';
 import { UpdateUserDto } from '../common/dto/updateUser.dto';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
@@ -55,9 +55,18 @@ export class UsersController {
 	@UseGuards(RolesGuard)
 	@Roles(UserRole.ADMIN, UserRole.USER)
 	@HttpCode(HttpStatus.OK)
-	async updateUser(@Body() updateUserDto: UpdateUserDto, @Request() req: AuthenticatedRequest) {
+	async updateUser(
+		@Param('uuid') uuid: string,
+		@Body() updateUserDto: UpdateUserDto,
+		@Request() req: AuthenticatedRequest,
+	) {
+		// Only allow non-admin users to update their own record
+		if (req.user.role !== UserRole.ADMIN && req.user.id !== uuid) {
+			throw new ForbiddenException({ message: 'Insufficient permissions to update this user' });
+		}
+
 		try {
-			await this.usersService.update(req.user.id, updateUserDto);
+			await this.usersService.update(uuid, updateUserDto);
 		} catch (error) {
 			if (error instanceof NotFoundException) throw new NotFoundException({ message: 'User not found' });
 			throw error;

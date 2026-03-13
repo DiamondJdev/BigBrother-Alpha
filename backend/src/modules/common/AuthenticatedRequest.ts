@@ -1,8 +1,9 @@
+import { UserRole } from "./utils/userRole.enum";
+
 export interface AuthenticatedRequest {
 	user: {
 		id: string;
-		role: string;
-		roles: string[];
+		role: UserRole;
 		username: string;
 	};
 	cookies?: {
