@@ -1,3 +1,5 @@
+import { UserRole } from "../utils/userRole.enum";
+
 /**
  * Data Transfer Object for caching user data.
  *
@@ -16,8 +18,8 @@ export class UserCacheDto {
   // Username for display and identification
   username: string;
 
-  // User's role for authorization checks
-  role: string;
+  // User's roles for authorization checks
+  roles: UserRole[];
 
   /**
    * When the refresh token expires (Date)

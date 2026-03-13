@@ -63,7 +63,7 @@ export class AuthController {
    */
   @Post("login")
   @HttpCode(HttpStatus.OK)
-  @Throttle({ short: { ttl: 60000, limit: 5 } }) // 5 login attempts per minute
+  @Throttle({ short: { ttl: 60000, limit: 5 } }) // 5 login attempts per minute per IP
   @UseGuards(BodyRequiredGuard) // Checks input before hitting route
   async login(
     @Body() loginUserDto: loginUserDto,
@@ -72,7 +72,7 @@ export class AuthController {
     message: string;
     accessToken: string;
     refreshToken: string;
-    user: { id: string; username: string; role: string };
+    user: { id: string; username: string; roles: string[] };
     token_type: string;
   }> {
     const result = await this.authService.login(loginUserDto);
@@ -101,7 +101,7 @@ export class AuthController {
     message: string;
     accessToken: string;
     refreshToken: string;
-    user: { id: string; username: string; role: string };
+    user: { id: string; username: string; roles: string[] };
     token_type: string;
   }> {
     const result = await this.authService.register(createUserDto);
@@ -176,13 +176,13 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
   getCurrentUser(@Request() req: AuthenticatedRequest): {
-    data: { id: string; username: string; role: string };
+    data: { id: string; username: string; roles: string[] };
   } {
     return {
       data: {
         id: req.user.id,
         username: req.user.username,
-        role: req.user.role,
+        roles: req.user.roles,
       },
     };
   }

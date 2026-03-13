@@ -56,7 +56,7 @@ async function seed() {
       const user = repo.create({
         username: u.username,
         password: hashed,
-        role: u.role,
+        roles: [u.role],
       } as User);
       await repo.save(user);
       console.log(`Created user: ${u.username}`);

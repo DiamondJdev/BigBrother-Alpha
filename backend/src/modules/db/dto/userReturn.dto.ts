@@ -1,4 +1,5 @@
-import { IsDate, IsString } from "class-validator";
+import { IsArray, IsDate, IsEnum, IsString } from "class-validator";
+import { UserRole } from "src/modules/common/utils/userRole.enum";
 
 /**
  * DTO for returning user data without sensitive information 
@@ -14,6 +15,7 @@ export class userReturnDto {
     @IsDate()
     createdAt: Date;
 
-    @IsString()
-    role: string;
+    @IsArray()
+    @IsEnum(UserRole, { each: true })
+    roles: UserRole[];
 }

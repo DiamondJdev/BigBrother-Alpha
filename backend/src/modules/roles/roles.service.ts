@@ -1,17 +1,18 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { DbService } from '../db/db.service';
+import { UserRole } from '../common/utils/userRole.enum';
 
 @Injectable()
 export class RolesService {
     constructor(private readonly dbService: DbService) {}
 
-	async getRole(userId: string): Promise<string> {
+	async getRoles(userId: string): Promise<UserRole[]> {
 		const user = await this.dbService.findOne(userId);
 		if (!user) throw new NotFoundException({ message: 'User not found' });
-		return user.roles[0] || 'user';
+		return user.roles;
 	}
 
-    async update(uuid: string, role: string): Promise<void> {
-        await this.dbService.updateRole(uuid, [role]);
+    async update(uuid: string, roles: UserRole[]): Promise<void> {
+        await this.dbService.updateRole(uuid, roles);
     } 
 }
