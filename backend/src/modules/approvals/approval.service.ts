@@ -92,7 +92,9 @@ export class ApprovalService {
       }
     }
 
-    const { legal, security, it } = latestApprovals;
+    const legal = latestApprovals[ApprovalType.LEGAL];
+    const security = latestApprovals[ApprovalType.SECURITY];
+    const it = latestApprovals[ApprovalType.IT];
     let overall: 'approved' | 'rejected' | 'pending' = 'pending';
     if (legal && security && it) {
       if (legal === ApprovalDecision.APPROVED && security === ApprovalDecision.APPROVED && it === ApprovalDecision.APPROVED) {
