@@ -26,7 +26,7 @@ export class UsersController {
 				id: user.id,
 				username: user.username,
 				createdAt: user.createdAt,
-				role: user.roles,
+				roles: user.roles,
 			})),
 		};
 	}
@@ -40,7 +40,7 @@ export class UsersController {
 			message: 'User retrieved successfully',
 			id: req.user.id,
 			username: req.user.username,
-			role: req.user.roles[0],
+			roles: req.user.roles,
 		};
 	}
 
