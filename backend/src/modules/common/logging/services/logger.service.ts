@@ -346,7 +346,7 @@ export class LoggerService implements NestLoggerService {
 		this.log(message, context);
 	}
 	
-	logRequest(method: string, url: string, statusCode: number, duration: number, userId?: string): void {
+	logRequest(method: string, url: string, statusCode: number, duration: number, userId?: string, requestId?: string): void {
 		this.writeLog({
 			timestamp: this.getTimestamp(),
 			level: LogLevel.INFO,
@@ -355,6 +355,7 @@ export class LoggerService implements NestLoggerService {
 			metadata: {
 				duration: `${duration}ms`,
 				userId: userId || 'anonymous',
+				requestId: requestId || 'unknown',
 			},
 		});
 	}
