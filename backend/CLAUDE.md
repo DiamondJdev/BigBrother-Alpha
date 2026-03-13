@@ -96,7 +96,7 @@ This repository follows the project's mandatory TDD workflow. Use agents accordi
 
 ## Development workflow
 
-- Local dev: `npm run start:dev` (the repo's start:dev runs Nest with --port 8080 per package.json script)
+- Local dev: `npm run dev` (runs Nest with --port 8080 per package.json script)
 - Build: `npm run build` (Nest build)
 - Lint: `npm run lint`
 - Tests: `npm test` / `npm run test:cov`
