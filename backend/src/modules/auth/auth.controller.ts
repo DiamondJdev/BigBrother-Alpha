@@ -144,7 +144,7 @@ export class AuthController {
 
   /**
    * Route to end user session by clearing auth cookies AND
-   * Removing stored tokens from the databse to invalidate the session server-side.
+   * Removing stored tokens from the database to invalidate the session server-side.
    *
    * !: Requires a valid JWT token in the Authorization header to identify the user session to log out.
    *
