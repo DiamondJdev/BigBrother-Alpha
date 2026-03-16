@@ -1,7 +1,7 @@
 import "reflect-metadata";
 import { DataSource } from "typeorm";
 import bcrypt from "bcrypt";
-import { User } from "../../modules/common/entities/user.entity";
+import { User, UserRole } from "../../modules/common/entities/user.entity";
 
 /**
  * Seed script for `bigbrother_test` database.
@@ -44,10 +44,10 @@ async function seed() {
 
   const saltRounds = 12;
 
-  const users = [
-    { username: "admin", password: "AdminPass123!", role: "admin" },
-    { username: "alice", password: "NotAdminPass123!", role: "user" },
-    { username: "bob", password: "NotAdminPass123!", role: "user" },
+  const users: Array<{ username: string; password: string; role: UserRole }> = [
+    { username: "admin", password: "AdminPass123!", role: UserRole.ADMIN },
+    { username: "alice", password: "NotAdminPass123!", role: UserRole.USER },
+    { username: "bob", password: "NotAdminPass123!", role: UserRole.USER },
   ];
 
   for (const u of users) {
@@ -57,7 +57,7 @@ async function seed() {
         username: u.username,
         password: hashed,
         roles: [u.role],
-      } as User);
+      });
       await repo.save(user);
       console.log(`Created user: ${u.username}`);
     } catch (err: unknown) {
