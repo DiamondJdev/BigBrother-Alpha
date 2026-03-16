@@ -173,11 +173,11 @@ export class AuthService {
     refreshToken: string,
   ): Promise<{ message: string; accessToken: string; refreshToken: string }> {
     /** 
-     * Read the hash from the dedicated refresh_token:{userId} cache key rather
+     * Read the hash from the dedicated refreshToken:{userId} cache key rather
      * than from the user entity cache. The user entity cache (user:{userId}) is
      * a general-purpose cache whose DEL can fail silently, leaving a stale hash
      * in place and allowing replayed tokens to pass validation. The
-     * refresh_token:{userId} key is always written atomically with the DB in
+     * refreshToken:{userId} key is always written atomically with the DB in
      * saveRefreshToken, so it is always authoritative.
      */
     const storedHash = await this.dbService.getRefreshTokenHash(req.user.id);

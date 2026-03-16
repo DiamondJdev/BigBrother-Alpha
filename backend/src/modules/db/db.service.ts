@@ -243,7 +243,7 @@ export class DbService {
   /**
    * Returns the stored refresh token hash for a user.
    *
-   * Reads from the dedicated `refresh_token:{userId}` cache key, which is
+   * Reads from the dedicated `refreshToken:{userId}` cache key, which is
    * always written atomically alongside the DB in saveRefreshToken. This key
    * is always current and is never stale — unlike the broader `user:{userId}`
    * entity cache, which can lag behind a rotation if its DEL is dropped.
@@ -287,7 +287,7 @@ export class DbService {
     await this.cacheService.set(
       CacheKeys.refreshToken(userId),
       refreshTokenHash,
-      CacheTTL.REFRESH_TOKEN,
+      CacheTTL.refreshToken,
     );
     await this.cacheService.del(CacheKeys.userSafe(userId));
   }
