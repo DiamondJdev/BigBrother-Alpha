@@ -12,7 +12,7 @@ interface RequestWithUser {
     authorization?: string;
   };
   cookies?: {
-    access_token?: string;
+    accessToken?: string;
   };
   user?: {
     id: string;
@@ -38,10 +38,10 @@ export class JwtAuthGuard implements CanActivate {
       const [bearer, headerToken] = authorization.split(" ");
       if (bearer !== "Bearer" || !headerToken) throw new UnauthorizedException("Invalid authorization format");
       token = headerToken;
-    } else if (request.cookies?.access_token) {
-      token = request.cookies.access_token;
+    } else if (request.cookies?.accessToken) {
+      token = request.cookies.accessToken;
     } else {
-      throw new UnauthorizedException("Authorization header or access_token cookie is missing");
+      throw new UnauthorizedException("Authorization header or accessToken cookie is missing");
     }
 
 

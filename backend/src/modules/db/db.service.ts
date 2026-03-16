@@ -14,6 +14,7 @@ import { isValidRoles } from "../common/utils/roleChecker";
 import { CacheService } from "../cache/cache.service";
 import { CacheKeys } from "../cache/constants/cache-keys";
 import { CacheTTL } from "../cache/constants/cache-ttl";
+import { UserRole } from "../common/utils/userRole.enum";
 
 @Injectable()
 export class DbService {
@@ -148,7 +149,7 @@ export class DbService {
     return new UserCacheDto({
       id: user.id!,
       username: user.username,
-      role: user.role,
+      roles: user.roles,
       refreshTokenExpiresAt: user.refreshTokenExpiresAt ?? undefined,
       createdAt: user.createdAt,
     });
@@ -167,7 +168,7 @@ export class DbService {
     const user = new User();
     user.id = cached.id;
     user.username = cached.username;
-    user.role = cached.role;
+    user.roles = cached.roles;
     user.refreshTokenExpiresAt = cached.refreshTokenExpiresAt;
     user.createdAt = cached.createdAt;
 
@@ -227,13 +228,11 @@ export class DbService {
    * @throws BadRequestException if roles are invalid or user not found
    * @returns void
    */
-  async updateRole(uuid: string, roles: string[]): Promise<void> {
+  async updateRole(uuid: string, roles: UserRole[]): Promise<void> {
     if (!isValidRoles(roles)) throw new BadRequestException("Invalid roles");
-
     const result = await this.userRepository.update({ id: uuid }, { roles });
 
-    if (result.affected === 0)
-      throw new BadRequestException("Could not find user to update roles");
+    if (result.affected === 0) throw new BadRequestException("Could not find user to update roles");
     await this.cacheService.del(
       CacheKeys.userSafe(uuid),
       CacheKeys.userRole(uuid),
@@ -244,7 +243,7 @@ export class DbService {
   /**
    * Returns the stored refresh token hash for a user.
    *
-   * Reads from the dedicated `refresh_token:{userId}` cache key, which is
+   * Reads from the dedicated `refreshToken:{userId}` cache key, which is
    * always written atomically alongside the DB in saveRefreshToken. This key
    * is always current and is never stale — unlike the broader `user:{userId}`
    * entity cache, which can lag behind a rotation if its DEL is dropped.
@@ -288,7 +287,7 @@ export class DbService {
     await this.cacheService.set(
       CacheKeys.refreshToken(userId),
       refreshTokenHash,
-      CacheTTL.REFRESH_TOKEN,
+      CacheTTL.refreshToken,
     );
     await this.cacheService.del(CacheKeys.userSafe(userId));
   }

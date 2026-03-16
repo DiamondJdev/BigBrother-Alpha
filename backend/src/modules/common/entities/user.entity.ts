@@ -5,10 +5,10 @@ import {
   CreateDateColumn,
   Index,
 } from "typeorm";
+import { UserRole } from "../utils/userRole.enum";
 
 @Entity({ name: "users" })
 @Index("idx_users_username", ["username"]) // Unique index already exists, but explicit is better
-@Index("idx_users_role", ["role"]) // For role-based queries
 export class User {
   // Auto-generated UUID primary key for the user entity
   @PrimaryGeneratedColumn("uuid")
@@ -25,7 +25,7 @@ export class User {
   password: string;
 
   @Column("text", { array: true, default: ["user"] })
-  roles: string[];
+  roles: UserRole[];
 
   @Column({ type: "varchar", length: 512, nullable: true })
   refreshTokenHash?: string | null;
