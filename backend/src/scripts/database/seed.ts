@@ -1,7 +1,8 @@
 import "reflect-metadata";
 import { DataSource } from "typeorm";
 import bcrypt from "bcrypt";
-import { User, UserRole } from "../../modules/common/entities/user.entity";
+import { User } from "../../modules/common/entities/user.entity";
+import { UserRole } from "../../modules/common/utils/userRole.enum";
 
 /**
  * Seed script for `bigbrother_test` database.
