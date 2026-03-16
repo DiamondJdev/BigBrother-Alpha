@@ -1,6 +1,5 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import { Redis } from '@upstash/redis';
-import { LoggerService } from '../common/logging/services/logger.service';
 
 @Injectable()
 export class QueueService {
@@ -8,20 +7,19 @@ export class QueueService {
 
   constructor(
     @Inject('REDIS_CLIENT') private readonly redis: Redis,
-    private readonly loggerService: LoggerService,
   ) {}
 
-  async enqueue(queueName: string, job: any, correlationId?: string): Promise<void> {
+  async enqueue(queueName: string, job: Record<string, unknown>, correlationId?: string): Promise<void> {
     const jobWithId = { ...job, correlationId };
     await this.redis.lpush(queueName, JSON.stringify(jobWithId));
-    this.loggerService.log(`Enqueued job to ${queueName}`, 'QueueService', { correlationId });
+    this.logger.log(`Enqueued job to ${queueName}`, QueueService.name);
   }
 
-  async dequeue(queueName: string): Promise<any | null> {
-    const result = await this.redis.brpop(queueName, 0);
+  async dequeue(queueName: string): Promise<Record<string, unknown> | null> {
+    const result = await this.redis.rpop<string>(queueName);
     if (result) {
-      const job = JSON.parse(result[1]);
-      this.loggerService.log(`Dequeued job from ${queueName}`, 'QueueService', { correlationId: job.correlationId });
+      const job = JSON.parse(result) as Record<string, unknown>;
+      this.logger.log(`Dequeued job from ${queueName}`, QueueService.name);
       return job;
     }
     return null;

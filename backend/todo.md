@@ -28,7 +28,7 @@ Goal: Fix critical and high severity security issues identified in security revi
   - Add stricter limits for auth endpoints using per-route throttling (e.g., 5 login attempts per minute on login routes)
   - **Impact:** Currently vulnerable to brute force and DDoS attacks
 
-- [ ] **CRITICAL: Add Security Headers**
+- [x] **CRITICAL: Add Security Headers**
   - Install `helmet` middleware
   - Configure in `main.ts` for XSS, clickjacking, MIME sniffing protection
   - **Impact:** Missing protection against common web attacks
@@ -63,8 +63,8 @@ Before marking Track 0 complete, verify:
 
 - [ ] CORS only allows specific trusted origins
 - [x] Rate limiting active on all endpoints (test with rapid requests)
-- [ ] Security headers present in responses (check with browser dev tools)
-- [ ] Auth endpoints have identical response patterns/timing
+- [x] Security headers present in responses (check with browser dev tools)
+- [x] Auth endpoints have identical response patterns/timing
 - [x] All cookies marked as secure and httpOnly
 - [x] No hardcoded secrets remain in codebase
 - [x] No synchronous file operations in hot paths
@@ -79,9 +79,9 @@ Goal: create the shared foundation needed by all other tracks.
 
 ### 1.1 Add queue + object storage
 
-- [ ] Add queue service (Redis/RabbitMQ) and backend queue module
-- [ ] Add object storage client module (S3-compatible)
-- [ ] Add health checks for queue and object storage
+- [x] Add queue service (Redis/RabbitMQ) and backend queue module
+- [x] Add object storage client module (S3-compatible)
+- [x] Add health checks for queue and object storage
 
 Why this matters:
 
@@ -95,9 +95,9 @@ Done means:
 
 ### 1.2 Add config + secrets safety
 
-- [ ] Add config schema validation (fail startup on missing required env vars)
-- [ ] Move secrets to env/secret manager only (no hardcoded values)
-- [ ] Add startup checks for JWT, DB, queue, and storage credentials
+- [x] Add config schema validation
+- [x] Move secrets to env/secret manager only (no hardcoded values)
+- [x] Add startup checks for JWT, DB, queue, and storage credentials
 
 Why this matters:
 

@@ -1,11 +1,11 @@
-import { IsString, IsNotEmpty, IsObject, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty, IsObject } from 'class-validator';
 
-export class enqueueJobDto {
+export class EnqueueJobDto {
   @IsString()
   @IsNotEmpty()
   queueName!: string;
-  
+
   @IsObject()
-  @IsOptional()
-  job?: Record<string, unknown>;
+  @IsNotEmpty()
+  job!: Record<string, unknown>;
 }
