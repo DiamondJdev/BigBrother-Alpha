@@ -25,7 +25,7 @@ export class UsersController {
 				id: user.id,
 				username: user.username,
 				createdAt: user.createdAt,
-				role: user.role,
+				role: user.roles,
 			})),
 		};
 	}
