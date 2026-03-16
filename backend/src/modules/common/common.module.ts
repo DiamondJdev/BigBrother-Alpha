@@ -1,4 +1,4 @@
-import { Module, forwardRef } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { HealthController } from './health/controller/health.controller';
 import { DbModule } from '../db/db.module';
 import { LoggerService } from './logging/services/logger.service';
@@ -8,7 +8,7 @@ import { QueueModule } from '../queue/queue.module';
 import { ObjectStorageModule } from '../object-storage/object-storage.module';
 
 @Module({
-    imports: [DbModule, forwardRef(() => QueueModule), ObjectStorageModule],
+    imports: [DbModule, QueueModule, ObjectStorageModule],
     controllers: [HealthController],
     providers: [LoggerService, LoggingInterceptor, MetricsService],
     exports: [LoggerService, LoggingInterceptor, MetricsService],
