@@ -8,12 +8,13 @@ This project-level CLAUDE.md is a short reference for future Claude Code session
 
 ## Quick facts
 
-- Project: NestJS Template (JWT auth, RBAC, TypeORM + PostgreSQL)
+- Project: NestJS Template (JWT auth, RBAC, TypeORM + PostgreSQL, Redis queue, S3 storage)
 - Language: TypeScript
 - Framework: NestJS 11
 - Test runner: Jest
 - Local DB: PostgreSQL
-- Cache: Upstash Redis
+- Cache & Queue: Upstash Redis
+- Object Storage: AWS S3
 - Main entry: [src/main.ts:7](src/main.ts#L7)
 - Scripts: see [package.json:8](package.json#L8)
 
@@ -25,8 +26,39 @@ This project-level CLAUDE.md is a short reference for future Claude Code session
 - Auth module (login/register/refresh): [src/modules/auth/auth.module.ts](src/modules/auth/auth.module.ts)
 - User entity: [src/modules/common/entities/user.entity.ts](src/modules/common/entities/user.entity.ts)
 - DB service & conversion helpers: [src/modules/db/db.service.ts](src/modules/db/db.service.ts), [src/modules/db/utils/userConversion.ts](src/modules/db/utils/userConversion.ts)
+- Queue service (Redis-based): [src/modules/queue/queue.service.ts](src/modules/queue/queue.service.ts), [src/modules/queue/queue.controller.ts](src/modules/queue/queue.controller.ts)
+- Object storage (S3): [src/modules/object-storage/object-storage.service.ts](src/modules/object-storage/object-storage.service.ts), [src/modules/object-storage/object-storage.controller.ts](src/modules/object-storage/object-storage.controller.ts)
 - Logging service and interceptor: [src/modules/common/logging/services/logger.service.ts](src/modules/common/logging/services/logger.service.ts), [src/modules/common/logging/interceptors/logging.interceptor.ts](src/modules/common/logging/interceptors/logging.interceptor.ts)
 - Example tests: [src/modules/db/db.service.spec.ts](src/modules/db/db.service.spec.ts), [src/modules/common/health/controller/health.controller.spec.ts](src/modules/common/health/controller/health.controller.spec.ts)
+
+---
+
+## Module Architecture
+
+### Queue Module ([src/modules/queue/](src/modules/queue/))
+
+- **Purpose**: Redis-based job queue system for asynchronous task processing
+- **Service**: `QueueService` provides enqueue/dequeue operations with correlation IDs
+- **Controller**: JWT-protected endpoints for job management (`/queue/enqueue`, `/queue/status`)
+- **Dependencies**: Upstash Redis client via `@upstash/redis`
+- **Key Operations**:
+  - `enqueue(queueName, job, correlationId)` - Add jobs to named queues
+  - `dequeue(queueName)` - Remove and return jobs from queues (FIFO)
+  - `getQueueLength(queueName)` - Monitor queue depth
+  - `ping()` - Health check Redis connectivity
+
+### Object Storage Module ([src/modules/object-storage/](src/modules/object-storage/))
+
+- **Purpose**: AWS S3-compatible object storage for file management
+- **Service**: `ObjectStorageService` handles upload/download/delete operations
+- **Controller**: JWT-protected REST endpoints (`/storage/upload`, `/storage/download/:key`, `/storage/delete/:key`)
+- **Dependencies**: AWS SDK v3 S3 client (`@aws-sdk/client-s3`)
+- **Key Operations**:
+  - `upload(key, buffer, contentType)` - Store files in S3
+  - `download(key)` - Retrieve files as buffers
+  - `delete(key)` - Remove files from storage
+  - `ping()` - Health check S3 bucket access
+- **API**: Base64-encoded data transfer for JSON compatibility
 
 ---
 
@@ -35,6 +67,8 @@ This project-level CLAUDE.md is a short reference for future Claude Code session
 - Environment variables are read via `@nestjs/config`. See README `Environment Variables` section.
 - Required at runtime:
   - `JWT_SECRET` (must be set in production)
+  - `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` (for queue and cache)
+  - `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `S3_BUCKET` (for object storage)
   - Optional but recommended: `PORT`, `JWT_ACCESS_EXP`, `JWT_REFRESH_EXP`
 - Development default port: 5200
 - Never commit real secrets. `.env` is in `.gitignore`.
@@ -131,6 +165,8 @@ Parallelize agents where tasks are independent (e.g., run security-reviewer and 
 - User model: [src/modules/common/entities/user.entity.ts](src/modules/common/entities/user.entity.ts)
 - DB wiring: [src/modules/db/db.service.ts](src/modules/db/db.service.ts)
 - Cache wiring: [src/modules/cache/cache.service.ts](src/modules/cache/cache.service.ts)
+- Queue operations: [src/modules/queue/queue.service.ts](src/modules/queue/queue.service.ts)
+- Object storage operations: [src/modules/object-storage/object-storage.service.ts](src/modules/object-storage/object-storage.service.ts)
 
 ---
 
