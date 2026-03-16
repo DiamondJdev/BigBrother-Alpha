@@ -23,7 +23,7 @@ export class RolesGuard implements CanActivate {
 		const requiredRoles: UserRole[] = reflectedRoles
 			.map((role) => {
 				if (typeof role !== 'string') {
-					return role;
+					return role as unknown;
 				}
 				const validRoles = Object.values(UserRole) as string[];
 				if (validRoles.includes(role)) {
