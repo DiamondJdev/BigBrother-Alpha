@@ -9,6 +9,7 @@ import { tap } from "rxjs/operators";
 import type { Request, Response } from "express";
 import { LoggerService } from "../services/logger.service";
 import type { AuthenticatedRequest } from "../../AuthenticatedRequest";
+import { v4 as uuidv4 } from 'uuid';
 
 interface HttpError extends Error {
   status?: number;
@@ -31,6 +32,8 @@ export class LoggingInterceptor implements NestInterceptor<unknown, unknown> {
       .switchToHttp()
       .getResponse<ResponseWithStatusCode>();
     const { method, url, user } = request;
+    const requestId = uuidv4();
+    request['requestId'] = requestId;
     const startTime = Date.now();
 
     return next.handle().pipe(
@@ -40,14 +43,14 @@ export class LoggingInterceptor implements NestInterceptor<unknown, unknown> {
           const statusCode = response.statusCode;
           const userId = user?.id;
 
-          this.logger.logRequest(method, url, statusCode, duration, userId);
+          this.logger.logRequest(method, url, statusCode, duration, userId, requestId);
         },
         error: (error: HttpError) => {
           const duration = Date.now() - startTime;
           const statusCode = error.status || 500;
           const userId = user?.id;
 
-          this.logger.logRequest(method, url, statusCode, duration, userId);
+          this.logger.logRequest(method, url, statusCode, duration, userId, requestId);
           this.logger.error(
             `Error in ${method} ${url}: ${error.message}`,
             error.stack,
