@@ -1,11 +1,12 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { QueueService } from './queue.service';
 import { QueueController } from './queue.controller';
 import { Redis } from '@upstash/redis';
+import { CommonModule } from '../common/common.module';
 
 @Module({
-  imports: [ConfigModule],
+  imports: [ConfigModule, forwardRef(() => CommonModule)],
   controllers: [QueueController],
   providers: [
     {
