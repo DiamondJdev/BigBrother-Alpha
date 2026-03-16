@@ -14,7 +14,7 @@ export const CacheKeys = {
   userRole: (uuid: string): string => `user_role:${uuid}`,
 
   /** Hashed refresh token for a user, mirrors the DB column */
-  refreshToken: (userId: string): string => `refresh_token:${userId}`,
+  refreshToken: (userId: string): string => `refreshToken:${userId}`,
 
   /** Admin-facing full user list from DbService.findAll() */
   allUsers: (): string => `users:all`,

@@ -11,6 +11,7 @@ import { loginUserDto } from "./dto/loginUser.dto";
 import { User } from "../common/entities/user.entity";
 import type { AuthenticatedRequest } from "../common/AuthenticatedRequest";
 import { LoggerService } from "../common/logging/services/logger.service";
+import { UserRole } from "../common/utils/userRole.enum";
 
 // Pre-generated dummy bcrypt hash with cost factor 12 for timing-attack mitigation
 const DUMMY_BCRYPT_HASH =
@@ -104,7 +105,7 @@ export class AuthService {
     message: string;
     accessToken: string;
     refreshToken: string;
-    user: { id: string; username: string; role: string };
+    user: { id: string; username: string; roles: string[] };
   }> {
     const saltRounds = 12;
 
@@ -124,20 +125,20 @@ export class AuthService {
     let user: User = {
       username: createUserDto.username,
       password: hashedPassword,
-      role: "user",
+      roles: [UserRole.USER],
     };
 
     user = (await this.dbService.create(user)) as User;
     if (!user || !user.id)
       throw new InternalServerErrorException("Error while creating user");
     const { accessToken, refreshToken, refreshTokenHash } =
-      await this.jwtService.rotateTokens(user.id, user.role);
+      await this.jwtService.rotateTokens(user.id, user.roles);
     await this.dbService.saveRefreshToken(user.id, refreshTokenHash);
 
     this.logger.log(`New user registered: ${user.username}`, "AuthService");
     this.logger.logUserStats("registration", user.id, {
       username: user.username,
-      role: user.role,
+      roles: user.roles,
     });
 
     return {
@@ -147,7 +148,7 @@ export class AuthService {
       user: {
         id: user.id,
         username: user.username,
-        role: user.role,
+        roles: user.roles,
       },
     };
   }
@@ -172,11 +173,11 @@ export class AuthService {
     refreshToken: string,
   ): Promise<{ message: string; accessToken: string; refreshToken: string }> {
     /** 
-     * Read the hash from the dedicated refresh_token:{userId} cache key rather
+     * Read the hash from the dedicated refreshToken:{userId} cache key rather
      * than from the user entity cache. The user entity cache (user:{userId}) is
      * a general-purpose cache whose DEL can fail silently, leaving a stale hash
      * in place and allowing replayed tokens to pass validation. The
-     * refresh_token:{userId} key is always written atomically with the DB in
+     * refreshToken:{userId} key is always written atomically with the DB in
      * saveRefreshToken, so it is always authoritative.
      */
     const storedHash = await this.dbService.getRefreshTokenHash(req.user.id);
@@ -200,7 +201,7 @@ export class AuthService {
       accessToken,
       refreshToken: newRefreshToken,
       refreshTokenHash,
-    } = await this.jwtService.rotateTokens(req.user.id, req.user.role);
+    } = await this.jwtService.rotateTokens(req.user.id, req.user.roles);
     await this.dbService.saveRefreshToken(req.user.id, refreshTokenHash);
 
     this.logger.logUserStats("token_refresh", req.user.id);

@@ -22,8 +22,8 @@ import type { AuthenticatedRequest } from "../common/AuthenticatedRequest";
 import type { Response as ExpressResponse } from "express";
 
 /** Max-age values for auth cookies */
-const ACCESS_TOKEN_MAX_AGE_S = 15 * 60; // 15 minutes
-const REFRESH_TOKEN_MAX_AGE_S = 7 * 24 * 3600; // 7 days
+const accessToken_MAX_AGE_S = 15 * 60; // 15 minutes
+const refreshToken_MAX_AGE_S = 7 * 24 * 3600; // 7 days
 
 function setAuthCookies(
   res: ExpressResponse,
@@ -36,20 +36,20 @@ function setAuthCookies(
     sameSite: "strict" as const,
     path: "/",
   };
-  res.cookie("access_token", accessToken, {
+  res.cookie("accessToken", accessToken, {
     ...cookieBase,
-    maxAge: ACCESS_TOKEN_MAX_AGE_S * 1000,
+    maxAge: accessToken_MAX_AGE_S * 1000,
   });
-  res.cookie("refresh_token", refreshToken, {
+  res.cookie("refreshToken", refreshToken, {
     ...cookieBase,
-    maxAge: REFRESH_TOKEN_MAX_AGE_S * 1000,
+    maxAge: refreshToken_MAX_AGE_S * 1000,
   });
 }
 
 function clearAuthCookies(res: ExpressResponse): void {
   const cookieBase = { httpOnly: true, path: "/" };
-  res.clearCookie("access_token", cookieBase);
-  res.clearCookie("refresh_token", cookieBase);
+  res.clearCookie("accessToken", cookieBase);
+  res.clearCookie("refreshToken", cookieBase);
 }
 
 @Controller("/auth")
@@ -63,7 +63,7 @@ export class AuthController {
    */
   @Post("login")
   @HttpCode(HttpStatus.OK)
-  @Throttle({ short: { ttl: 60000, limit: 5 } }) // 5 login attempts per minute
+  @Throttle({ short: { ttl: 60000, limit: 5 } }) // 5 login attempts per minute per IP
   @UseGuards(BodyRequiredGuard) // Checks input before hitting route
   async login(
     @Body() loginUserDto: loginUserDto,
@@ -72,7 +72,7 @@ export class AuthController {
     message: string;
     accessToken: string;
     refreshToken: string;
-    user: { id: string; username: string; role: string };
+    user: { id: string; username: string; roles: string[] };
     token_type: string;
   }> {
     const result = await this.authService.login(loginUserDto);
@@ -101,7 +101,7 @@ export class AuthController {
     message: string;
     accessToken: string;
     refreshToken: string;
-    user: { id: string; username: string; role: string };
+    user: { id: string; username: string; roles: string[] };
     token_type: string;
   }> {
     const result = await this.authService.register(createUserDto);
@@ -131,7 +131,7 @@ export class AuthController {
     @Request() req: AuthenticatedRequest,
     @Response({ passthrough: true }) res: ExpressResponse,
   ) {
-    const refreshToken = req.cookies?.refresh_token;
+    const refreshToken = req.cookies?.refreshToken;
     if (!refreshToken)
       throw new UnauthorizedException("Refresh token is missing");
     const result = await this.authService.refresh(req, refreshToken);
@@ -176,13 +176,13 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
   getCurrentUser(@Request() req: AuthenticatedRequest): {
-    data: { id: string; username: string; role: string };
+    data: { id: string; username: string; roles: string[] };
   } {
     return {
       data: {
         id: req.user.id,
         username: req.user.username,
-        role: req.user.role,
+        roles: req.user.roles,
       },
     };
   }
