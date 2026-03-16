@@ -14,8 +14,29 @@ import { UserRole } from '../utils/userRole.enum';
 export class RolesGuard implements CanActivate {
 	constructor(private reflector: Reflector) {}
 	canActivate(context: ExecutionContext): boolean | Promise<boolean> | Observable<boolean> {
-		const requiredRoles = this.reflector.get<UserRole[]>('roles', context.getHandler());
-		if (!requiredRoles) return true;
+		const reflectedRoles = this.reflector.get<string[] | UserRole[]>('roles', context.getHandler());
+		if (!reflectedRoles || !Array.isArray(reflectedRoles) || reflectedRoles.length === 0) {
+			// No roles metadata defined: allow access (preserve existing behavior)
+			return true;
+		}
+
+		const requiredRoles: UserRole[] = reflectedRoles
+			.map((role) => {
+				if (typeof role !== 'string') {
+					return role;
+				}
+				const validRoles = Object.values(UserRole) as string[];
+				if (validRoles.includes(role)) {
+					return role as UserRole;
+				}
+				return undefined;
+			})
+			.filter((role): role is UserRole => role !== undefined);
+
+		if (requiredRoles.length === 0) {
+			// All reflected roles were invalid: treat as if no roles were required
+			return true;
+		}
 		
 		const req = context.switchToHttp().getRequest<Request & { user?: { roles?: UserRole[] } }>();
 		const { user } = req;
