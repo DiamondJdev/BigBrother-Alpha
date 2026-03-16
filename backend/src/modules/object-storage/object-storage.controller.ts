@@ -1,8 +1,7 @@
-import { Controller, Post, Body, Get, Param, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Get, Delete, Param, UseGuards } from '@nestjs/common';
 import { ObjectStorageService } from './object-storage.service';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { BodyRequiredGuard } from '../auth/guard/body-required.guard';
-import { DownloadObjectParamsDto } from './dto/downloadObjectParam.dto';
 import { UploadObjectDto } from './dto/uploadObject.dto';
 
 @Controller('storage')
@@ -19,8 +18,14 @@ export class ObjectStorageController {
   }
 
   @Get('download/:key')
-  async download(@Param('key') key: DownloadObjectParamsDto) {
-    const buffer = await this.storageService.download(key.key);
+  async download(@Param('key') key: string) {
+    const buffer = await this.storageService.download(key);
     return { data: buffer.toString('base64') };
+  }
+
+  @Delete('delete/:key')
+  async delete(@Param('key') key: string) {
+    await this.storageService.delete(key);
+    return { message: 'File deleted' };
   }
 }
