@@ -2,7 +2,7 @@ import { Controller, Post, Body, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { QueueService } from './queue.service';
 import { QueueStatusDto } from './dto/queueStatus.dto';
-import { enqueueJobDto } from './dto/enqueueJob.dto';
+import { EnqueueJobDto } from './dto/enqueueJob.dto';
 import { BodyRequiredGuard } from '../auth/guard/body-required.guard';
 
 @Controller('queue')
@@ -12,7 +12,7 @@ export class QueueController {
 
   @Post('enqueue')
   @UseGuards(BodyRequiredGuard)
-  async enqueue(@Body() body: enqueueJobDto) {
+  async enqueue(@Body() body: EnqueueJobDto) {
     await this.queueService.enqueue(body.queueName, body.job);
     return { message: 'Job enqueued' };
   }
