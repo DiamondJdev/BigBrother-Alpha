@@ -1,0 +1,32 @@
+Super Duper Simple Instructions to run & test the agent ❤️
+
+Prerequisites:
+- Docker is running on your machine (Docker Desktop or Docker daemon).
+- Node.js installed (v18+).
+
+3 steps (copy-paste each into a terminal from the project root):
+
+1) Build the sandbox image (only needed once):
+   docker build -t bigbrother-sandbox .backend_archive/sandbox -f .backend_archive/sandbox/Dockerfile.sandbox
+
+2) Install Node dependencies:
+   npm install
+
+3) Run the quick test script (uses a tiny dummy .exe):
+   npx ts-node --transpile-only examples/run_test.ts
+
+What will happen:
+- The script creates a test run and launches the sandbox to execute a tiny dummy PE file.
+- Artifacts (installer, logs, metrics, file-diff) are written to: ./storage/artifacts/<tenant>/<test-run-id>/
+- The script prints the test run status to the terminal while it runs.
+
+If you want to test with a real installer:
+- Edit examples/run_test.ts and replace the dummy buffer with: const dummy = await fs.readFile('/path/to/your/installer.exe');
+- Then re-run step 3.
+
+Troubleshooting:
+- "Cannot connect to Docker daemon": start Docker and ensure your user can access the docker socket.
+- "No such image: bigbrother-sandbox": run step 1 to build the sandbox image.
+- If artifacts folder is empty, check terminal logs for errors; ensure the process can write to ./storage.
+
+That's it — 3 commands and you should see output and artifacts. ❤️
