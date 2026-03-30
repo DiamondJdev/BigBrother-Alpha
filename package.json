@@ -1,0 +1,16 @@
+{
+  "name": "bigbrother-agent",
+  "version": "1.0.0",
+  "description": "Agent-only runtime for running installers in sandbox containers",
+  "main": "dist/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "test-agent": "node examples/run_test.js"
+  },
+  "dependencies": {
+    "dockerode": "^4.0.9",
+    "tar-stream": "^3.1.8",
+    "pino": "^8.9.0",
+    "envalid": "^8.1.1"
+  }
+}
