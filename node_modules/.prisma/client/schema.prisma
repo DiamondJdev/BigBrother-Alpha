@@ -1,0 +1,75 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum TestRunStatus {
+  PENDING
+  PROVISIONING
+  PRE_METRICS
+  INSTALLING
+  POST_METRICS
+  ANALYZING
+  COMPLETED
+  FAILED
+  TIMED_OUT
+}
+
+enum ArtifactType {
+  INSTALLER
+  METRICS_REPORT
+  FILE_DIFF_REPORT
+  STDOUT_LOG
+  STDERR_LOG
+}
+
+enum SandboxType {
+  WINE_LINUX
+}
+
+enum StorageClass {
+  LOCAL
+}
+
+model TestRun {
+  id             String        @id @default(uuid())
+  tenantId       String        @map("tenant_id")
+  softwareId     String        @map("software_id")
+  status         TestRunStatus @default(PENDING)
+  sandboxType    SandboxType   @default(WINE_LINUX) @map("sandbox_type")
+  runReason      String?       @map("run_reason")
+  attemptNumber  Int           @default(1) @map("attempt_number")
+  idempotencyKey String?       @unique @map("idempotency_key")
+  startedAt      DateTime?     @map("started_at")
+  completedAt    DateTime?     @map("completed_at")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  artifacts TestArtifact[]
+
+  @@index([tenantId])
+  @@index([softwareId])
+  @@index([status])
+  @@map("test_runs")
+}
+
+model TestArtifact {
+  id                String       @id @default(uuid())
+  tenantId          String       @map("tenant_id")
+  testRunId         String       @map("test_run_id")
+  artifactType      ArtifactType @map("artifact_type")
+  objectKey         String       @map("object_key")
+  contentHash       String       @map("content_hash")
+  installerByteSize Int?         @map("installer_byte_size")
+  storageClass      StorageClass @default(LOCAL) @map("storage_class")
+  createdAt         DateTime     @default(now()) @map("created_at")
+
+  testRun TestRun @relation(fields: [testRunId], references: [id], onDelete: Cascade)
+
+  @@index([testRunId])
+  @@index([tenantId])
+  @@map("test_artifacts")
+}
