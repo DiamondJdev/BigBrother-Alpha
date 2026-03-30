@@ -1,32 +1,126 @@
-Super Duper Simple Instructions to run & test the agent ❤️
+BigBrother Agent — How it works, how to integrate, and how to test (simple, clear)
 
-Prerequisites:
-- Docker is running on your machine (Docker Desktop or Docker daemon).
-- Node.js installed (v18+).
+Overview
+--------
+This repository now contains an "agent engine" that runs uploaded installers inside lightweight Docker sandboxes and produces artifacts (installer copy, logs, metrics, file-diff). The agent is intentionally minimal so another backend can call it (programmatically) and consume results. The agent does NOT require a database to run in the default test mode — it uses an in-memory store for run metadata.
 
-3 steps (copy-paste each into a terminal from the project root):
+Main components
+---------------
+- Agent entrypoint (dist/agent.js)
+  - Programmatic API: startTestRun({ tenantId, softwareId, idempotencyKey, installerBuffer, ... })
+  - Creates a test run record (in-memory) and launches the orchestrator pipeline.
+- Orchestrator (dist/services/orchestrator.service.js)
+  - Pipeline: PROVISIONING → PRE_METRICS → INSTALLING → POST_METRICS → ANALYZING → COMPLETED
+  - Uses services to create/start container, copy installer, execute installer, capture metrics, and analyze filesystem changes.
+- Sandbox (sandbox/)
+  - Minimal Docker image (sandbox/Dockerfile) with entrypoint that waits for /sandbox/installer.exe and simulates an install.
+  - This is intentionally lightweight for testing. Replace with a production sandbox image for real Wine installs.
+- Artifacts (storage/artifacts/)
+  - Binary files and reports are written here, e.g. storage/artifacts/<tenant>/<run-id>/installer.exe, metrics_report.json, file_diff_report.json, stdout.log, stderr.log.
+- In-memory storage shim (dist/lib/prisma.js)
+  - Provides a small Prisma-like API so the agent can run without Postgres. Data is ephemeral (lost on restart).
 
-1) Build the sandbox image (only needed once):
-   docker build -t bigbrother-sandbox .backend_archive/sandbox -f .backend_archive/sandbox/Dockerfile.sandbox
+Quick 3-step test (copy-paste)
+------------------------------
+Run these commands from the project root:
 
-2) Install Node dependencies:
+1) Build the sandbox image (only once):
+   docker build -t bigbrother-sandbox sandbox
+
+2) Install Node dependencies (only once on this machine):
    npm install
 
-3) Run the quick test script (uses a tiny dummy .exe):
-   npx ts-node --transpile-only examples/run_test.ts
+3) Run the test example (runs the agent and a sandbox container):
+   node examples/run_test.js
 
-What will happen:
-- The script creates a test run and launches the sandbox to execute a tiny dummy PE file.
-- Artifacts (installer, logs, metrics, file-diff) are written to: ./storage/artifacts/<tenant>/<test-run-id>/
-- The script prints the test run status to the terminal while it runs.
+What the test does (short)
+-------------------------
+- Creates a test run and starts a sandbox container.
+- Copies a small dummy PE buffer into the container as installer.exe.
+- The sandbox entrypoint waits for the file, then simulates installation and exits.
+- The agent captures artifacts and writes them to disk under storage/artifacts/<tenant>/<run-id>/.
 
-If you want to test with a real installer:
-- Edit examples/run_test.ts and replace the dummy buffer with: const dummy = await fs.readFile('/path/to/your/installer.exe');
-- Then re-run step 3.
+How to inspect artifacts safely
+-----------------------------
+Do NOT execute installer.exe on your host. Use these safe commands (replace <run-id>):
+- List files:  ls -la storage/artifacts/tenant-test/<run-id>
+- Identify type: file storage/artifacts/tenant-test/<run-id>/installer.exe
+- Extract printable strings: strings storage/artifacts/tenant-test/<run-id>/installer.exe | head -n 200
+- View first bytes (hex): hexdump -C -n 64 storage/artifacts/tenant-test/<run-id>/installer.exe
+- Check SHA-256: shasum -a 256 storage/artifacts/tenant-test/<run-id>/installer.exe
+- View JSON reports: jq . storage/artifacts/tenant-test/<run-id>/metrics_report.json
+  (If you don’t have jq, use Node: node -e "console.log(JSON.stringify(JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')),null,2))" <file>)
 
-Troubleshooting:
-- "Cannot connect to Docker daemon": start Docker and ensure your user can access the docker socket.
-- "No such image: bigbrother-sandbox": run step 1 to build the sandbox image.
-- If artifacts folder is empty, check terminal logs for errors; ensure the process can write to ./storage.
+How to integrate this agent with your backend
+--------------------------------------------
+Two simple options depending on how you want to integrate:
 
-That's it — 3 commands and you should see output and artifacts. ❤️
+Option A — Direct import (preferred when backend and agent are deployed together)
+- Import the agent and call startTestRun programmatically:
+  const agent = require('path/to/repo/dist/agent');
+  const fs = require('fs').promises;
+  const buf = await fs.readFile('/tmp/installer.exe');
+  const res = await agent.startTestRun({ tenantId:'t1', softwareId:'s1', installerBuffer: buf, idempotencyKey:'abc' });
+- The agent returns immediately with run.id; poll your chosen status endpoint or query the returned run object (if running in-process) to detect completion.
+- Artifacts will be written to storage/artifacts/<tenant>/<run-id>/ on disk; your backend can read or move them as needed.
+
+Option B — Queue / worker (recommended for decoupling)
+- Have your backend push a job to a queue (SQS/Rabbit/Redis) with installer data or an object-store path.
+- Run the agent as a separate worker process that reads the queue, calls startTestRun for each job, and reports back via callback URL or message with the run id and artifact locations.
+
+Notes for integration
+- The current agent uses an in-memory store (no Postgres). If you need persistent DB records, restore the Prisma schema and run Postgres, then replace the in-memory shim with the real Prisma client.
+- The sandbox image used for testing is a minimal simulator. For real Windows installers you must provide a sandbox image that contains Wine and required tools, and update config.SANDBOX_IMAGE_NAME accordingly.
+- By default the agent mounts Docker and uses the Docker daemon. The host running the agent must be allowed to start containers.
+
+Files you should know (short list)
+---------------------------------
+- dist/agent.js            → programmatic agent API (startTestRun)
+- dist/services/*          → orchestrator and helpers (metrics, installer, file analysis)
+- dist/lib/prisma.js       → in-memory storage shim (ephemeral)
+- sandbox/Dockerfile       → lightweight sandbox image for testing
+- sandbox/entrypoint.sh    → sandbox behavior (waits for installer and simulates install)
+- examples/run_test.js     → simple runner that calls the agent and polls status
+- storage/artifacts/       → where artifacts are written
+- SUPER_SIMPLE_RUN.txt     → quick 3-step commands (this file)
+- TESTING.md               → longer test notes and troubleshooting
+
+Testing checklist (what to verify)
+----------------------------------
+1. docker images | grep bigbrother-sandbox  → image exists
+2. node examples/run_test.js  → script runs until run completes
+3. storage/artifacts/<tenant>/<run-id>/ contains:
+   - installer.exe (original binary or dummy buffer)
+   - metrics_report.json (if metrics captured)
+   - file_diff_report.json (filesystem analysis)
+   - stdout.log / stderr.log
+4. If install fails, inspect container logs: docker ps -a --filter ancestor=bigbrother-sandbox; docker logs <container-id>
+
+Troubleshooting tips (short)
+---------------------------
+- "Cannot connect to Docker daemon": start Docker Desktop or use Colima (colima start)
+- Missing modules errors: run npm install in project root
+- Container exited before installer was copied: rebuild sandbox and use the updated entrypoint (it waits up to 30s)
+
+Security notes (short)
+----------------------
+- Never run untrusted installers on your host machine. The sandbox runs containers but still requires careful host hardening.
+- Do not mount sensitive host paths into sandbox containers. The sandbox is for testing and must be run on isolated hosts for untrusted binaries.
+
+Extending the agent (ideas)
+---------------------------
+- Replace in-memory store with a persistence layer (Postgres + Prisma) if the backend needs durable records.
+- Provide a callback URL in startTestRun so the agent can POST results when a run completes.
+- Swap the test sandbox with a production sandbox image that includes Wine and tcpdump (for egress capture).
+
+If you want I can also:
+- Add a one-command "inspect_artifacts.sh" helper that summarizes artefacts for a run,
+- Modify examples/run_test.js to accept a real installer path and an environment variable to toggle sandbox image name,
+- Restore Prisma persistence and add migration scripts.
+
+Contact/Next steps
+------------------
+If you want me to make one of the extensions above or simplify any step further, tell me which and I will update this file and commit the change.
+
+---
+(Edited by the agent to be clear, simple and actionable.)
