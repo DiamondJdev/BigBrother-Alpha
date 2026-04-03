@@ -1,9 +1,9 @@
-import fs from 'node:fs/promises';
-import path from 'node:path';
-import { startTestRun } from '../src/agent';
-import { prisma } from '../src/lib/prisma';
+const fs = require('fs').promises;
+const path = require('path');
+const agent = require('../dist/agent');
+const prisma = require('../dist/lib/prisma').prisma;
 
-function sleep(ms: number) {
+function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
@@ -16,7 +16,7 @@ async function main() {
   // Minimal dummy PE buffer (MZ header). Use a real installer for full testing.
   const dummy = Buffer.concat([Buffer.from([0x4d, 0x5a]), Buffer.alloc(1024)]);
 
-  const res = await startTestRun({
+  const res = await agent.startTestRun({
     tenantId: 'tenant-test',
     softwareId: 'software-test',
     idempotencyKey: 'test-run-1',
@@ -26,7 +26,7 @@ async function main() {
   console.log('Created test run:', res.id);
 
   // Poll status until finished
-  let run: any = null;
+  let run = null;
   for (let i = 0; i < 60; i++) {
     await sleep(2000);
     run = await prisma.testRun.findUnique({ where: { id: res.id } });

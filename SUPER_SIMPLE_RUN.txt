@@ -124,3 +124,55 @@ If you want me to make one of the extensions above or simplify any step further,
 
 ---
 (Edited by the agent to be clear, simple and actionable.)
+
+------------------
+
+"What does it check for?"
+
+Short answer: the agent runs the installer in a Linux sandbox and gathers behavioral + environmental signals. It validates the file looks like a PE, executes it under Wine, and records what changed on the       
+  filesystem, what the process did (CPU/memory/network/io), and any logs/exit code. Those signals are saved as artifacts/metadata that your backend/frontend can display.
+                                                                                                                                                                                                                     
+  Details — what is collected and what the code checks                                                                                                                                                               
+  - Installer validation                                                                                                                                                                                             
+    - Checks the buffer starts with the PE "MZ" header (basic sanity check that it’s a Windows EXE). See dist/services/installer.service.js:53 (validateExecutable).                                                 
+  - Persisting the installer                                
+    - Saves the installer as an artifact (local storage) so the backend can reference it later. See dist/lib/prisma.js:65-87 (testArtifact.create) and dist/agent.js where artifacts are saved.
+  - Copying into the sandbox
+    - Creates a tar archive and copies the .exe into the container at /sandbox/installer.exe. See dist/services/installer.service.js:65-76 (createTarArchive / copyInstallerToContainer).
+  - Executing the installer
+    - Runs the installer inside the container via Wine, with an Xvfb wrapper; captures stdout/stderr and exit code. See dist/services/installer.service.js:83-96 and the command used at
+  dist/services/installer.service.js:88.
+    - Timeout handling: installer execution is raced against a timeout to avoid hangs (dist/services/installer.service.js:91-96).
+  - Metrics before/after (process & resource activity)
+    - Captures Docker stats (CPU, memory, network, block I/O, pid count) before and after install, then computes deltas (e.g., CPU% change, memory change, network bytes). See dist/services/metrics.service.js:46-56
+   (normalizeStats), dist/services/metrics.service.js:115-121 (captureSnapshot), and buildReport at dist/services/metrics.service.js:132-137.
+    - The orchestrator triggers before/after snapshots; see dist/services/orchestrator.service.js:85 (before snapshot) and dist/services/orchestrator.service.js:99-102 (after + report save).
+  - Filesystem analysis (what files changed)
+    - Uses docker diff to list added/changed/deleted files and directories touched. See dist/services/file-analysis.service.js:82-88 and 93-95.
+    - Flags writes to a configurable list of “banned” or sensitive directories (e.g., /etc/sudoers, ssh keys, cron, init scripts) — touching these is marked suspicious. See the banned list at
+  dist/services/file-analysis.service.js:48-62 and violation detection at dist/services/file-analysis.service.js:96-101.
+    - Estimates disk footprint of added files (using du inside the container when possible; falls back to a rough estimate). See dist/services/file-analysis.service.js:134-169.
+  - Artifacts produced
+    - Installer (original .exe)
+    - Stdout and stderr logs from installer run
+    - Metrics report (before/after snapshots + delta)
+    - File-diff report (list of changes, banned violations, directories touched, footprint)
+    - These are saved as artifacts and linked into the TestRun object (dist/lib/prisma.js and the orchestrator saving steps — see dist/services/orchestrator.service.js around the save calls).
+  - Failure handling / safety
+    - Timeouts, Docker errors, or exec errors are caught; the orchestrator marks the run FAILED or TIMED_OUT and still attempts cleanup (container stop/remove). See orchestrator error handling at
+  dist/services/orchestrator.service.js:114-134.
+
+  What it does NOT reliably do (limitations)
+  - This is a behavioral and heuristic analysis, not a full signature AV engine. It won’t necessarily detect every malicious payload.
+  - It relies on Wine/Linux sandbox behavior for .exe execution; some Windows-only behaviors or kernel-level effects won’t show up.
+  - False positives/negatives are possible (e.g., legitimate installers may touch system dirs or spawn processes that look suspicious).
+  - Architecture/image issues (e.g., incompatible sandbox image) can cause the container to exit before analysis; that’s an environment problem, not a detection rule.
+
+  How the results map to your backend/frontend
+  - The agent writes artifact metadata (object key, hash, size) and JSON reports (metrics, file-diff). The backend can ingest those artifacts or read them from ARTIFACT_STORAGE_PATH and present:
+    - Installer metadata (hash, size)
+    - Installer stdout/stderr and exit code
+    - File-diff summary and list of suspicious/banned paths touched
+    - Resource delta chart (CPU/memory/network changes)
+    - Estimated disk footprint
+  - Integration points: after the orchestrator sets COMPLETED, you can POST the TestRun + artifact metadata to your backend (hook point in dist/services/orchestrator.service.js:108-112).

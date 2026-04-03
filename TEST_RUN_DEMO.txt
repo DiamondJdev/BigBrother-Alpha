@@ -1,0 +1,103 @@
+Agent-engine local test checklist and demo script
+
+Purpose
+- This is the agent-engine portion of the project: it creates a TestRun, launches an orchestration pipeline that runs an installer inside a Linux sandbox container, captures artifacts (installer, logs, metrics, file-diff), and stores minimal run metadata in an in-memory shim (no DB needed).
+- Use the steps below to test on Windows and to demonstrate to your teacher.
+
+Prereqs (Windows test machine)
+- Docker Desktop running (Linux containers mode)
+- Node.js v16+ (v18+ recommended)
+- npm
+- (Optional) npx / ts-node if you want to run TypeScript directly
+
+Quick PowerShell commands
+1) Install dependencies
+  npm install
+
+2) (Optional) Build the project sandbox image if you have the Dockerfile
+  # from repo root (per TESTING.md)
+  docker build -t bigbrother-sandbox .backend_archive/sandbox -f .backend_archive/sandbox/Dockerfile.sandbox
+
+3) Choose sandbox image and set env
+  # If you built the project sandbox
+  $env:SANDBOX_IMAGE_NAME = "bigbrother-sandbox"
+  # OR for a smoke-test (keeps container alive)
+  $env:SANDBOX_IMAGE_NAME = "nginx:stable"
+
+4) Run the example runner (JS)
+  npm run test-agent
+
+Alternative: run TypeScript runner and pass a real .exe as an arg
+  npx ts-node --transpile-only examples/run_test.ts "C:\path\to\installer.exe"
+
+How to use a real installer in examples/run_test.ts
+- Replace the dummy buffer with a file read, or pass the installer path as argv[2]. Example replacement near examples/run_test.ts:16-18:
+  const installerPath = process.argv[2] || path.resolve("installer.exe");
+  const installerBuffer = await fs.readFile(installerPath);
+- Then run with: npx ts-node --transpile-only examples/run_test.ts "C:\path\to\installer.exe"
+
+What to expect in the logs
+- "Created test run: <uuid>" (proof startTestRun worked) — examples/run_test.js:19-26
+- Status transitions (PROVISIONING → PRE_METRICS → INSTALLING → POST_METRICS → ANALYZING → COMPLETED), or FAILED/TIMED_OUT if something goes wrong — see orchestrator pipeline in dist/services/orchestrator.service.js (updateStatus at dist/services/orchestrator.service.js:49-57, pipeline start ~dist/services/orchestrator.service.js:68-76, completion ~dist/services/orchestrator.service.js:108-111)
+- Final printed TestRun object (includes artifacts) — examples/run_test.js:38 and dist/lib/prisma.js shows artifact structure: dist/lib/prisma.js:8-30 and artifact save at dist/lib/prisma.js:65-87
+- Saved artifact files appear under ./storage/artifacts/<tenant>/<run-id>/ (ARTIFACT_STORAGE_PATH default set in dist/config/index.js:23)
+
+If the run fails (common) — quick diagnostics
+- Typical failure seen: "Failed to exec in container: ... container ... is not running"
+  - Usually caused by the container exiting immediately (image has no long-running CMD/ENTRYPOINT) or container crashing.
+
+Inspect the container (use containerId from logs)
+  docker ps -a --filter "name=bigbrother-" --format "table {{.ID}}\t{{.Image}}\t{{.Status}}\t{{.Names}}"
+  docker logs <containerId>
+  docker inspect --format '{{.State.Status}} {{.State.ExitCode}} {{.State.Error}}' <containerId>
+  docker inspect <containerId>  # full JSON
+
+Common local fixes for a successful smoke test
+- Use a long-running image so the container stays up (smoke-test):
+  docker pull nginx:stable
+  $env:SANDBOX_IMAGE_NAME = "nginx:stable"
+  npm run test-agent
+  # This confirms orchestration can copy the installer, save artifacts, exec into a running container (though installer execution may still fail because nginx image doesn't have Wine).
+
+- If you need to run an image built for a different CPU arch (rare on Windows): set DOCKER_DEFAULT_PLATFORM=linux/amd64 before running.
+
+- Dev-only trick: keep the container alive by starting it with a foreground command (tail -f /dev/null) by adding Cmd: ['tail','-f','/dev/null'] to the docker.createContainer options in dist/services/sandbox.service.js (temporary for testing).
+
+What to show your teacher (demo script)
+1) Run: npm run test-agent
+2) Show console logs:
+   - "Created test run: <id>" (examples/run_test.js:19-26)
+   - Status transition logs from dist/services/orchestrator.service.js (e.g. PROVISIONING, PRE_METRICS, INSTALLING)
+   - Final TestRun object printed (examples/run_test.js:38) — shows status, timestamps, artifacts array
+3) Show artifacts on disk:
+   dir .\storage\artifacts\tenant-test\<run-id> (or use Explorer)
+4) If container exited unexpectedly, show docker logs/inspect for the containerId (helps explain cause)
+
+Files to point at in the repo during Q&A
+- examples/run_test.js (or examples/run_test.ts): the example runner that creates the test run and polls for status — examples/run_test.js:19-26 and examples/run_test.js:28-36 and examples/run_test.js:38
+- dist/agent.js: startTestRun implementation (creates DB entry and calls orchestrator) — dist/agent.js:5-16 and dist/agent.js:18-26
+- dist/services/orchestrator.service.js: main orchestration pipeline, status updates, error handling — dist/services/orchestrator.service.js:49-57, dist/services/orchestrator.service.js:68-76, dist/services/orchestrator.service.js:108-111
+- dist/lib/prisma.js: in-memory prisma shim and artifact storage structure — dist/lib/prisma.js:8-30 and dist/lib/prisma.js:65-87
+- dist/config/index.js: ARTIFACT_STORAGE_PATH default (where artifacts are written) — dist/config/index.js:23
+
+Integration notes (how to get results into backend/frontend)
+- Simple demo: show the artifacts directory and final printed TestRun object (no backend needed)
+- Integration approaches:
+  - Agent HTTP POST: after COMPLETED, the agent posts summary + artifact metadata to backend API (hook after the COMPLETED update in dist/services/orchestrator.service.js:108-111).
+  - Polling: backend polls agent for run summaries by runId or reads artifact storage to import results.
+  - Direct storage: agent writes artifact metadata to a shared store (S3/DB) and backend reads it.
+- If you need help wiring a single POST to your backend, I can suggest the exact code location and a small snippet; I won’t change the repo unless you ask.
+
+Preparation checklist for presentation
+- Have Docker Desktop running on the Windows machine
+- Have a real .exe (if you want to demo file analysis on a real installer)
+- Run npm install before the demo
+- Run npm run test-agent and be ready to show the logs and artifacts folder
+- If something fails: show docker logs/inspect to explain why (common causes above)
+
+Optional next steps I can do for you (tell me which):
+- Add support in examples/run_test.ts to accept an installer path argument (small edit) so you can run it easily on Windows
+- Add a short README or a single-line PowerShell script to run the demo quickly
+- Add a temporary Cmd override in dist/services/sandbox.service.js to keep containers alive for local testing (I will not commit this unless you ask)
+
+Good luck tomorrow — tell me which optional helper you want and I will add it now (installer-arg helper or quick demo script).
