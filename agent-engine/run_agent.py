@@ -1,7 +1,6 @@
 # run_agent.py
 import sys
 from agent_collector_engine import run_monitor
-import run_monitor
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
