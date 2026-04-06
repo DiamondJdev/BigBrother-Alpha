@@ -1,6 +1,9 @@
+# agent-collector-engine.py
 import psutil
 import time
 from dataclasses import dataclass, asdict
+from typing import List
+
 
 # -----------------------------
 # Snapshot Data Structure
@@ -14,6 +17,7 @@ class Snapshot:
     bytes_recv: int
     outbound_connections: list
     banned_files: list
+    active_processes: List[str]
 
 
 # -----------------------------
@@ -46,6 +50,16 @@ class MetricsCollector:
                     touched.append(os.path.join(root, f))
         return touched
 
+    def _get_active_processes(self):
+        names = []
+        for p in psutil.process_iter(["name"]):
+            try:
+                if p.info["name"]:
+                    names.append(p.info["name"])
+            except psutil.NoSuchProcess:
+                pass
+        return sorted(set(names))
+
     def take_snapshot(self):
         cpu = psutil.cpu_percent(interval=0.3)
         vm = psutil.virtual_memory()
@@ -58,7 +72,8 @@ class MetricsCollector:
             bytes_sent=net.bytes_sent,
             bytes_recv=net.bytes_recv,
             outbound_connections=self._get_outbound_connections(),
-            banned_files=self._scan_banned_dirs()
+            banned_files=self._scan_banned_dirs(),
+            active_processes=self._get_active_processes()
         )
 
 
@@ -97,34 +112,46 @@ class AppMonitor:
         print(f"{self.target_app} closed")
 
     def run(self):
-        # Wait for app to open
         proc = self.wait_for_open()
 
-        # BEFORE snapshot
         before = self.collector.take_snapshot()
         self.before_snapshots.append(asdict(before))
 
-        # Wait for app to close
         self.wait_for_close(proc)
 
-        # AFTER snapshot
         after = self.collector.take_snapshot()
         self.after_snapshots.append(asdict(after))
 
-        # Print results
-        print("\n=== BEFORE SNAPSHOT ===")
-        print(self.before_snapshots[-1])
-
-        print("\n=== AFTER SNAPSHOT ===")
-        print(self.after_snapshots[-1])
+        return before, after
 
 
 # -----------------------------
-# Run Example
+# Public Callable Function
+# -----------------------------
+def run_monitor(app_name, banned_dirs=None):
+    monitor = AppMonitor(app_name, banned_dirs=banned_dirs)
+    before, after = monitor.run()
+
+    print("\n==============================")
+    print("      SYSTEM METRICS REPORT")
+    print("==============================\n")
+
+    def pretty(label, snap):
+        print(f"--- {label} ---")
+        print(f"CPU Usage: {snap.cpu_percent}%")
+        print(f"Memory Used: {snap.memory_used / (1024**2):.2f} MB ({snap.memory_percent}%)")
+        print(f"Network Sent: {snap.bytes_sent / 1024:.2f} KB")
+        print(f"Network Received: {snap.bytes_recv / 1024:.2f} KB")
+        print(f"Active Processes: {len(snap.active_processes)} processes")
+        print(f"Outbound Connections: {len(snap.outbound_connections)} connections")
+        print(f"Banned Files Touched: {len(snap.banned_files)} files\n")
+
+    pretty("BEFORE", before)
+    pretty("AFTER", after)
+
+
+# -----------------------------
+# Only runs when executed directly
 # -----------------------------
 if __name__ == "__main__":
-    monitor = AppMonitor(
-        target_app="notepad.exe",
-        banned_dirs=["C:\\Temp\\forbidden", "C:\\Users\\Public\\Secret"]
-    )
-    monitor.run()
+    run_monitor("notepad.exe")
